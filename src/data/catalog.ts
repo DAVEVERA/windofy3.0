@@ -227,6 +227,13 @@ const productSpecs: ProductSpec[] = [
   spec("curtains", "Overgordijn", "Dichte gordijnstof", "verduisterend", "vast", 22900, 14800, 600, 6000, 1000, 3500, catalogSourceUrls.luxaflex, "blackout-curtains"),
 ];
 
+const readyProductImages: Record<string, { url: string; reviewNotes: string }> = {
+  "wood-blinds-03": {
+    url: "/catalog/products/wood-blinds-zand.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic wooden slats, white frame, no text, no logo, no watermark.",
+  },
+};
+
 export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSpec) =>
   palette.map(([colorName, colorHex], index) => {
     const serial = String(index + 1).padStart(2, "0");
@@ -235,8 +242,10 @@ export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSp
       ? catalogSubgroups.find((item) => item.id === productSpec.subgroupId)
       : undefined;
     const productName = `${productSpec.namePrefix} ${colorName}`;
+    const productId = `${productSpec.subgroupId ?? productSpec.groupId}-${serial}`;
+    const readyImage = readyProductImages[productId];
     return {
-      id: `${productSpec.subgroupId ?? productSpec.groupId}-${serial}`,
+      id: productId,
       groupId: productSpec.groupId,
       subgroupId: productSpec.subgroupId,
       name: productName,
@@ -255,7 +264,7 @@ export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSp
       minHeightMm: productSpec.minHeightMm,
       maxHeightMm: productSpec.maxHeightMm,
       image: {
-        status: "pending-generation",
+        status: readyImage ? "ready" : "pending-generation",
         alt: `${productName} als waarheidsgetrouwe raamdecoratie productvisual.`,
         prompt: [
           "Realistische studio productfoto voor een Nederlandse raamdecoratie webshop.",
@@ -265,7 +274,9 @@ export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSp
           "Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking.",
           "Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.",
         ].join(" "),
+        url: readyImage?.url,
         referenceSourceUrl: productSpec.referenceSourceUrl,
+        reviewNotes: readyImage?.reviewNotes,
       },
       commerceBullets: productSpec.commerceBullets,
       measurementWarnings: productSpec.measurementWarnings,

@@ -103,7 +103,7 @@ function assetRows() {
     ${sqlString(product.image.alt)},
     ${sqlString(product.image.prompt)},
     ${sqlString(product.image.referenceSourceUrl)},
-    ${sqlString(product.image.status === "ready" ? "Approved catalog image." : "Pending generation and visual QA.")}
+    ${sqlString(product.image.reviewNotes ?? (product.image.status === "ready" ? "Approved catalog image." : "Pending generation and visual QA."))}
   )`);
 }
 

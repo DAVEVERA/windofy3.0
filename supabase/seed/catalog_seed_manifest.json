@@ -79,8 +79,8 @@
       }
     ],
     "imageStatus": {
-      "ready": 0,
-      "pendingGeneration": 240
+      "ready": 1,
+      "pendingGeneration": 239
     }
   },
   "sqlPath": "supabase\\seed\\catalog_seed.sql"

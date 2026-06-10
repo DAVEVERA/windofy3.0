@@ -1131,6 +1131,14 @@ textarea {
   border-radius: 999px;
 }
 
+.catalog-product img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  object-fit: cover;
+}
+
 .catalog-product small {
   color: var(--ink-soft);
 }

@@ -1736,7 +1736,11 @@ function ConfiguratorView({
                 className={configuration.catalogProductId === product.id ? "catalog-product active" : "catalog-product"}
                 onClick={() => patchConfiguration({ catalogProductId: product.id })}
               >
-                <span style={{ backgroundColor: product.colorHex }} />
+                {product.image.status === "ready" && product.image.url ? (
+                  <Image src={product.image.url} alt={product.image.alt} width={320} height={240} />
+                ) : (
+                  <span style={{ backgroundColor: product.colorHex }} />
+                )}
                 <strong>{product.name}</strong>
                 <small>{formatPrice(product.basePriceCents)} + m2 prijs</small>
               </button>

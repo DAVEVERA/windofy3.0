@@ -5805,13 +5805,13 @@ insert into public.catalog_product_assets (
   ),
 (
     'wood-blinds-03',
-    'pending-generation',
+    'ready',
     'product-photo',
-    null,
+    '/catalog/products/wood-blinds-zand.png',
     'Hout Zand als waarheidsgetrouwe raamdecoratie productvisual.',
     'Realistische studio productfoto voor een Nederlandse raamdecoratie webshop. Product: Hout Zand. Categorie: Houten jaloezieen. Materiaal/familie: Basswood. Kleur: Zand (#c7b79d). Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking. Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.',
     'https://www.raamdecoratie.com/',
-    'Pending generation and visual QA.'
+    'AI-generated product mockup visually inspected: realistic wooden slats, white frame, no text, no logo, no watermark.'
   ),
 (
     'wood-blinds-04',

@@ -169,6 +169,7 @@ export interface CatalogProductImage {
   prompt: string;
   url?: string;
   referenceSourceUrl?: string;
+  reviewNotes?: string;
 }
 
 export interface CatalogProduct {
