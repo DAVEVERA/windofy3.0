@@ -104,6 +104,7 @@ create table if not exists public.customer_projects (
 create table if not exists public.project_windows (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.customer_projects(id) on delete cascade,
+  client_id text,
   room_name text not null,
   window_name text not null,
   status text not null default 'missing-photo' check (status in ('complete', 'missing-photo', 'missing-measurement', 'needs-review')),

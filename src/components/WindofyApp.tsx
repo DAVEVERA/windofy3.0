@@ -120,6 +120,16 @@ type PaymentSessionResponse = {
     expiresAt: string;
   };
 };
+type ProjectSyncResponse = {
+  ok?: boolean;
+  error?: string;
+  mode?: "local-only";
+  project?: {
+    id: string;
+    savedWindows: number;
+    savedConfigurations: number;
+  };
+};
 type PreparedDraftOrder = {
   id: string;
   reference: string;
@@ -296,6 +306,14 @@ function readDraftState(): DraftState | null {
   } catch {
     return null;
   }
+}
+
+function readSupabaseAccessToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem("windofy.supabase.accessToken") ?? "";
 }
 
 export function WindofyApp() {
@@ -584,6 +602,38 @@ export function WindofyApp() {
     });
   };
 
+  const handleProjectCloudSync = async () => {
+    const accessToken = readSupabaseAccessToken();
+    const response = await fetch("/api/projects/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({
+        projectName: mockProject.name,
+        totalCents: cartTotal,
+        windows: allWindows.map((window) => {
+          const cartItem = cartItems.find((item) => item.windowId === window.id);
+          return {
+            id: window.id,
+            roomName: window.roomName,
+            windowName: window.name,
+            status: window.status,
+            measurement: window.measurement,
+            configuration: cartItem?.configuration,
+            priceCents: cartItem?.price,
+          };
+        }),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as ProjectSyncResponse | null;
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error ?? "Project kon niet in de cloud worden opgeslagen.");
+    }
+    return payload;
+  };
+
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
     setAnalysisStatus("loading");
     setAnalysisError("");
@@ -816,6 +866,7 @@ export function WindofyApp() {
             orderReference={orderReference}
             sampleRequests={sampleRequests}
             onContinueConfig={() => goTo("Ramencheck")}
+            onCloudSync={handleProjectCloudSync}
             onOrderLater={() => goTo("Checkout")}
             onSampleRequest={handleSampleRequest}
           />
@@ -1937,6 +1988,7 @@ function AccountView({
   orderReference,
   sampleRequests,
   onContinueConfig,
+  onCloudSync,
   onOrderLater,
   onSampleRequest,
 }: {
@@ -1947,11 +1999,27 @@ function AccountView({
   orderReference: string;
   sampleRequests: SampleRequest[];
   onContinueConfig: () => void;
+  onCloudSync: () => Promise<ProjectSyncResponse>;
   onOrderLater: () => void;
   onSampleRequest: (item: CheckoutCartItem) => void;
 }) {
   const completedWindows = allWindows.filter((window) => window.measurement && window.configuration).length;
   const reference = draftOrder?.reference ?? orderReference;
+  const [syncStatus, setSyncStatus] = useState<PipelineStatus>("idle");
+  const [syncMessage, setSyncMessage] = useState("");
+
+  const syncProject = async () => {
+    setSyncStatus("loading");
+    setSyncMessage("");
+    try {
+      const payload = await onCloudSync();
+      setSyncStatus("success");
+      setSyncMessage(`Cloudproject opgeslagen: ${payload.project?.savedWindows ?? 0} ramen, ${payload.project?.savedConfigurations ?? 0} configuraties.`);
+    } catch (error) {
+      setSyncStatus("error");
+      setSyncMessage(error instanceof Error ? error.message : "Cloud sync is mislukt.");
+    }
+  };
 
   return (
     <section className="flow-section checkout-grid">
@@ -2015,6 +2083,14 @@ function AccountView({
         <button className="primary-button wide" type="button" onClick={onOrderLater}>
           Bestelling openen<ArrowRight size={18} />
         </button>
+        <button className="secondary-button wide" type="button" disabled={syncStatus === "loading"} onClick={syncProject}>
+          {syncStatus === "loading" ? "Cloud opslaan..." : "Project in Mijn account opslaan"}<Save size={18} />
+        </button>
+        {syncMessage && (
+          <div className={syncStatus === "success" ? "pipeline-notice success" : "pipeline-notice error"}>
+            {syncMessage}
+          </div>
+        )}
       </aside>
       <section className="admin-ready">
         <h2>Aangevraagde staaltjes</h2>

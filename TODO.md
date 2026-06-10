@@ -31,6 +31,8 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add local catalog seed with 15 products per concrete product group/subgroup
 - [x] Add Supabase catalog/account/project/window/sample-order schema draft with RLS and explicit grants
 - [x] Add reproducible Supabase catalog seed SQL and catalog completeness verification
+- [x] Add server-side Supabase project sync route for authenticated customer projects
+- [ ] Add real Supabase Auth client/session flow and replace temporary access-token bridge
 - [x] Add first generated, inspected, ready product image and seed asset URL
 - [ ] Generate, store, inspect, and approve accurate product images for every catalog product
 - [x] Connect catalog products to the configurator product choices

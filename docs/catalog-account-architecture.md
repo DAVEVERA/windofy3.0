@@ -69,6 +69,24 @@ Sources:
 - https://supabase.com/docs/guides/api/securing-your-api
 - https://supabase.com/docs/guides/database/postgres/row-level-security
 
+## Project Sync API
+
+`POST /api/projects/sync` is the server-side bridge for saving customer projects to Supabase.
+
+Current behavior:
+
+- Requires `SUPABASE_URL` and server-side `SUPABASE_KEY`.
+- Requires a Supabase Auth bearer token in the `Authorization` header.
+- Verifies the user by calling Supabase Auth server-side.
+- Inserts into `customer_projects`, `project_windows`, and `project_window_configurations`.
+- Uses the authenticated user's token for PostgREST calls so RLS ownership policies remain active.
+- Returns `401` when the browser has no login token yet; local browser draft persistence remains the fallback.
+
+Frontend token note:
+
+- The current UI reads a future access token from `localStorage["windofy.supabase.accessToken"]`.
+- Once the real Supabase Auth client is added, that storage bridge should be replaced by the official session getter.
+
 ## Pricing Model
 
 The catalog supports per-window pricing:
