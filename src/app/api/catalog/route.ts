@@ -1,6 +1,6 @@
 import { catalogCompleteness, catalogGroups, catalogProducts, catalogSubgroups } from "@/data/catalog";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   return Response.json({
