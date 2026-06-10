@@ -21,6 +21,8 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Surface live AI guidance confidence/status and repeatable spoken instruction controls
 - [x] Send live measuring stage context with each AI guidance request
 - [x] Make apply-current-configuration-to-all-windows functional and persistent
+- [x] Make room rename controls functional and persistent across checkout
+- [x] Make manual measurement input save real measurements and unlock the flow without requiring a photo
 - [x] Final review
 
 ## Completion Marker

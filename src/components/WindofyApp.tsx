@@ -75,6 +75,7 @@ type DraftState = {
   draftOrder?: PreparedDraftOrder | null;
   checkoutDetails?: CheckoutDetails;
   measurementOverrides?: Record<string, Measurement>;
+  roomNameOverrides?: Record<string, string>;
 };
 type CheckoutDetails = {
   name: string;
@@ -258,6 +259,7 @@ export function WindofyApp() {
   const [draftOrder, setDraftOrder] = useState<PreparedDraftOrder | null>(null);
   const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(emptyCheckoutDetails);
   const [measurementOverrides, setMeasurementOverrides] = useState<Record<string, Measurement>>({});
+  const [roomNameOverrides, setRoomNameOverrides] = useState<Record<string, string>>({});
   const [draftRestored, setDraftRestored] = useState(false);
 
   const allWindows = useMemo(
@@ -266,16 +268,17 @@ export function WindofyApp() {
         room.windows.map((window) => {
           const measurement = measurementOverrides[window.id] ?? window.measurement;
           const windowConfiguration = configurationOverrides[window.id] ?? window.configuration;
+          const roomName = roomNameOverrides[room.id] ?? room.name;
           return {
             ...window,
             status: measurement ? window.status === "missing-measurement" ? "needs-review" : window.status : window.status,
             measurement,
             configuration: windowConfiguration,
-            roomName: room.name,
+            roomName,
           };
         }),
       ),
-    [configurationOverrides, measurementOverrides],
+    [configurationOverrides, measurementOverrides, roomNameOverrides],
   );
 
   const selectedWindow = allWindows.find((window) => window.id === selectedWindowId) ?? allWindows[0];
@@ -349,6 +352,9 @@ export function WindofyApp() {
       if (draft.measurementOverrides) {
         setMeasurementOverrides(draft.measurementOverrides);
       }
+      if (draft.roomNameOverrides) {
+        setRoomNameOverrides(draft.roomNameOverrides);
+      }
       setDraftRestored(true);
     }, 0);
 
@@ -374,6 +380,7 @@ export function WindofyApp() {
       draftOrder,
       checkoutDetails,
       measurementOverrides,
+      roomNameOverrides,
     };
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
@@ -388,6 +395,7 @@ export function WindofyApp() {
     paymentMethod,
     measurementOverrides,
     renderedImageDataUrl,
+    roomNameOverrides,
     selectedWindowId,
     uploadedFileName,
     uploadedImageDataUrl,
@@ -412,6 +420,7 @@ export function WindofyApp() {
     setDraftOrder(null);
     setCheckoutDetails(emptyCheckoutDetails);
     setMeasurementOverrides({});
+    setRoomNameOverrides({});
   };
 
   const handleMeasurementSave = (windowId: string, measurement: Measurement) => {
@@ -435,6 +444,18 @@ export function WindofyApp() {
     }, {});
 
     setConfigurationOverrides(nextOverrides);
+  };
+
+  const handleRoomRename = (roomId: string, currentName: string) => {
+    const nextName = window.prompt("Nieuwe ruimtenaam", roomNameOverrides[roomId] ?? currentName)?.trim();
+    if (!nextName) {
+      return;
+    }
+
+    setRoomNameOverrides((current) => ({
+      ...current,
+      [roomId]: nextName,
+    }));
   };
 
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
@@ -559,12 +580,15 @@ export function WindofyApp() {
         {activeStep === "Keuze" && <ChoiceView onChooseManual={() => goTo("Invoer")} onChooseVision={() => goTo("Invoer")} />}
         {activeStep === "Invoer" && (
           <InputView
+            key={selectedWindow.id}
             analysisError={analysisError}
             analysisResult={analysisResult}
             analysisStatus={analysisStatus}
+            selectedWindow={selectedWindow}
             onContinue={() => goTo("Ramencheck")}
             onLiveFrameAnalyze={handleLiveFrameAnalyze}
             onLiveGuidance={handleLiveGuidance}
+            onManualMeasurementSave={handleMeasurementSave}
             onPhotoUpload={handlePhotoUpload}
             uploadedFileName={uploadedFileName}
             uploadedImageDataUrl={uploadedImageDataUrl}
@@ -574,11 +598,13 @@ export function WindofyApp() {
           <ProjectOverview
             analysisResult={analysisResult}
             measurementOverrides={measurementOverrides}
+            roomNameOverrides={roomNameOverrides}
             selectedWindowId={selectedWindowId}
             onSelectWindow={setSelectedWindowId}
             onBackToMeasure={() => goTo("Invoer")}
             onContinue={() => goTo("Configuratie")}
             onMeasurementSave={handleMeasurementSave}
+            onRoomRename={handleRoomRename}
           />
         )}
         {activeStep === "Configuratie" && (
@@ -770,9 +796,11 @@ function InputView({
   analysisError,
   analysisResult,
   analysisStatus,
+  selectedWindow,
   onContinue,
   onLiveFrameAnalyze,
   onLiveGuidance,
+  onManualMeasurementSave,
   onPhotoUpload,
   uploadedFileName,
   uploadedImageDataUrl,
@@ -780,6 +808,7 @@ function InputView({
   analysisError: string;
   analysisResult: AnalysisResult | null;
   analysisStatus: PipelineStatus;
+  selectedWindow: WindowOpening & { roomName: string };
   onContinue: () => void;
   onLiveFrameAnalyze: (imageDataUrl: string) => Promise<void>;
   onLiveGuidance: (
@@ -787,6 +816,7 @@ function InputView({
     previousInstruction: string,
     measurementStage: LiveMeasurementStage,
   ) => Promise<LiveGuideResult>;
+  onManualMeasurementSave: (windowId: string, measurement: Measurement) => void;
   onPhotoUpload: (file: File) => void;
   uploadedFileName: string;
   uploadedImageDataUrl: string | null;
@@ -805,6 +835,12 @@ function InputView({
   const [liveInstruction, setLiveInstruction] = useState("");
   const [liveGuidanceMeta, setLiveGuidanceMeta] = useState<LiveGuidanceMeta | null>(null);
   const [measurementReady, setMeasurementReady] = useState(false);
+  const [manualWidthMm, setManualWidthMm] = useState(String(selectedWindow.measurement?.widthMm ?? ""));
+  const [manualHeightMm, setManualHeightMm] = useState(String(selectedWindow.measurement?.heightMm ?? ""));
+  const [manualDepthMm, setManualDepthMm] = useState(String(selectedWindow.measurement?.depthMm ?? ""));
+  const [manualNote, setManualNote] = useState(selectedWindow.notes ?? "Binnen het kozijn monteren, vensterbank vrijhouden.");
+  const [manualMessage, setManualMessage] = useState("");
+  const hasMeasurement = Boolean(selectedWindow.measurement);
 
   useEffect(() => {
     return () => {
@@ -974,6 +1010,27 @@ function InputView({
     }
   };
 
+  const saveManualMeasurement = () => {
+    const width = Number(manualWidthMm);
+    const height = Number(manualHeightMm);
+    const depth = Number(manualDepthMm);
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 200 || height < 200) {
+      setManualMessage("Vul een geldige breedte en hoogte in millimeters in.");
+      return;
+    }
+
+    onManualMeasurementSave(selectedWindow.id, {
+      id: selectedWindow.measurement?.id ?? `measure-${selectedWindow.id}`,
+      widthMm: Math.round(width),
+      heightMm: Math.round(height),
+      depthMm: Number.isFinite(depth) && depth > 0 ? Math.round(depth) : undefined,
+      source: "manual",
+      confidence: 0.98,
+    });
+    setManualMessage("Handmatige afmetingen opgeslagen voor dit raam.");
+  };
+
   return (
     <section className="flow-section split-flow">
       <div>
@@ -1088,7 +1145,7 @@ function InputView({
                 }}
               />
             </label>
-            <button className="primary-button" disabled={isAnalyzing || !uploadedImageDataUrl} onClick={onContinue}>
+            <button className="primary-button" disabled={isAnalyzing || (!uploadedImageDataUrl && !hasMeasurement)} onClick={onContinue}>
               {isAnalyzing ? "AI analyseert..." : "Ramen controleren"}
               <ArrowRight size={18} />
             </button>
@@ -1097,13 +1154,16 @@ function InputView({
       </div>
       <div className="manual-form">
         <h2>Handmatige invoer</h2>
-        <label>Ruimte<input defaultValue="Woonkamer" /></label>
-        <label>Raamnaam<input defaultValue="Voorraam" /></label>
+        <label>Ruimte<input value={selectedWindow.roomName} readOnly /></label>
+        <label>Raamnaam<input value={selectedWindow.name} readOnly /></label>
         <div className="input-row">
-          <label>Breedte<input defaultValue="1820 mm" /></label>
-          <label>Hoogte<input defaultValue="1460 mm" /></label>
+          <label>Breedte<input inputMode="numeric" value={manualWidthMm} onChange={(event) => setManualWidthMm(event.target.value)} placeholder="Breedte in mm" /></label>
+          <label>Hoogte<input inputMode="numeric" value={manualHeightMm} onChange={(event) => setManualHeightMm(event.target.value)} placeholder="Hoogte in mm" /></label>
         </div>
-        <label>Notitie<textarea defaultValue="Binnen het kozijn monteren, vensterbank vrijhouden. Live meting kan deze waarden controleren." /></label>
+        <label>Diepte dagmaat<input inputMode="numeric" value={manualDepthMm} onChange={(event) => setManualDepthMm(event.target.value)} placeholder="Optioneel, in mm" /></label>
+        <label>Notitie<textarea value={manualNote} onChange={(event) => setManualNote(event.target.value)} /></label>
+        {manualMessage && <div className={manualMessage.startsWith("Handmatige") ? "pipeline-notice success" : "pipeline-notice error"}>{manualMessage}</div>}
+        <button className="primary-button wide" onClick={saveManualMeasurement}>Afmetingen opslaan<Save size={18} /></button>
       </div>
     </section>
   );
@@ -1176,22 +1236,26 @@ function PipelineNotice({
 function ProjectOverview({
   analysisResult,
   measurementOverrides,
+  roomNameOverrides,
   selectedWindowId,
   onSelectWindow,
   onBackToMeasure,
   onContinue,
   onMeasurementSave,
+  onRoomRename,
 }: {
   analysisResult: AnalysisResult | null;
   measurementOverrides: Record<string, Measurement>;
+  roomNameOverrides: Record<string, string>;
   selectedWindowId: string;
   onSelectWindow: (id: string) => void;
   onBackToMeasure: () => void;
   onContinue: () => void;
   onMeasurementSave: (windowId: string, measurement: Measurement) => void;
+  onRoomRename: (roomId: string, currentName: string) => void;
 }) {
   const selectedProjectWindow = mockProject.rooms
-    .flatMap((room) => room.windows.map((window) => ({ ...window, roomName: room.name })))
+    .flatMap((room) => room.windows.map((window) => ({ ...window, roomName: roomNameOverrides[room.id] ?? room.name })))
     .find((window) => window.id === selectedWindowId);
   const selectedMeasurement = selectedProjectWindow
     ? measurementOverrides[selectedProjectWindow.id] ?? selectedProjectWindow.measurement
@@ -1215,28 +1279,31 @@ function ProjectOverview({
         </div>
       )}
       <div className="room-grid">
-        {mockProject.rooms.map((room) => (
-          <article className="room-card" key={room.id}>
-            <div className="room-card-header">
-              <Home size={19} />
-              <h2>{room.name}</h2>
-              <button className="icon-button" aria-label={`${room.name} hernoemen`}><Settings2 size={17} /></button>
-            </div>
-            <div className="window-list">
-              {room.windows.map((window) => (
-                <WindowSummaryButton
-                  key={window.id}
-                  isSelected={selectedWindowId === window.id}
-                  measurement={measurementOverrides[window.id] ?? window.measurement}
-                  onSelect={() => onSelectWindow(window.id)}
-                  status={window.status}
-                  windowName={window.name}
-                  hasPhoto={Boolean(window.photos.length)}
-                />
-              ))}
-            </div>
-          </article>
-        ))}
+        {mockProject.rooms.map((room) => {
+          const roomName = roomNameOverrides[room.id] ?? room.name;
+          return (
+            <article className="room-card" key={room.id}>
+              <div className="room-card-header">
+                <Home size={19} />
+                <h2>{roomName}</h2>
+                <button className="icon-button" aria-label={`${roomName} hernoemen`} onClick={() => onRoomRename(room.id, roomName)}><Settings2 size={17} /></button>
+              </div>
+              <div className="window-list">
+                {room.windows.map((window) => (
+                  <WindowSummaryButton
+                    key={window.id}
+                    isSelected={selectedWindowId === window.id}
+                    measurement={measurementOverrides[window.id] ?? window.measurement}
+                    onSelect={() => onSelectWindow(window.id)}
+                    status={window.status}
+                    windowName={window.name}
+                    hasPhoto={Boolean(window.photos.length)}
+                  />
+                ))}
+              </div>
+            </article>
+          );
+        })}
       </div>
       {selectedProjectWindow && (
         <MeasurementEditor
