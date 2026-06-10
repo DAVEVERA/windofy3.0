@@ -16,6 +16,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Audit Supabase/back-end contracts for production data ownership and security readiness
 - [x] Audit mobile purchase flow and checkout responsiveness with browser screenshots
 - [x] Persist checkout customer details and prepared order state across reloads
+- [x] Route checkout order preparation through a server-side draft order API
 - [x] Final review
 
 ## Completion Marker

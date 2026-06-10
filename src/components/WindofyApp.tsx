@@ -73,6 +73,21 @@ type CheckoutDetails = {
   houseNumber: string;
   address: string;
 };
+type CheckoutCartItem = {
+  id: string;
+  roomName: string;
+  windowName: string;
+  price: number;
+  measurement?: Measurement;
+  configuration?: BlindConfiguration;
+};
+type DraftOrderResponse = {
+  ok?: boolean;
+  error?: string;
+  order?: {
+    reference?: string;
+  };
+};
 type AnalysisResult = {
   qualityFailed?: boolean;
   qualityFeedback?: string;
@@ -226,7 +241,7 @@ export function WindofyApp() {
   const selectedMaterial = materials.find((material) => material.id === configuration.materialId);
   const selectedColor = colorOptions.find((color) => color.id === configuration.colorOptionId);
   const selectedLighting = lightingModes.find((mode) => mode.id === configuration.lightingModeId);
-  const cartItems = allWindows
+  const cartItems: CheckoutCartItem[] = allWindows
     .filter((window) => window.measurement && (window.configuration || window.id === selectedWindowId))
     .map((window, index) => ({
       id: `cart-${window.id}`,
@@ -1475,13 +1490,7 @@ function CheckoutView({
   onOrderReferenceChange,
   onPaymentMethodChange,
 }: {
-  cartItems: Array<{
-    id: string;
-    roomName: string;
-    windowName: string;
-    price: number;
-    measurement?: { widthMm: number; heightMm: number };
-  }>;
+  cartItems: CheckoutCartItem[];
   cartTotal: number;
   checkoutDetails: CheckoutDetails;
   orderReference: string;
@@ -1492,6 +1501,7 @@ function CheckoutView({
   onPaymentMethodChange: (value: "ideal" | "card") => void;
 }) {
   const [checkoutError, setCheckoutError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const missingMeasurements = cartItems.filter((item) => !item.measurement);
   const updateCheckoutField = (field: keyof CheckoutDetails, value: string) => {
     onCheckoutDetailsChange({ ...checkoutDetails, [field]: value });
@@ -1500,7 +1510,7 @@ function CheckoutView({
     }
   };
 
-  const handleCheckoutSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCheckoutSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCheckoutError("");
 
@@ -1524,9 +1534,39 @@ function CheckoutView({
       return;
     }
 
-    onCheckoutDetailsChange(normalizedDetails);
-    const reference = `WDF-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-    onOrderReferenceChange(reference);
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/orders/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: normalizedDetails,
+          paymentMethod,
+          totalCents: cartTotal,
+          items: cartItems.map((item) => ({
+            id: item.id,
+            roomName: item.roomName,
+            windowName: item.windowName,
+            price: item.price,
+            measurement: item.measurement,
+            configuration: item.configuration,
+          })),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as DraftOrderResponse | null;
+
+      if (!response.ok || !payload?.ok || !payload.order?.reference) {
+        setCheckoutError(payload?.error ?? "Bestelling kon niet worden voorbereid. Probeer het opnieuw.");
+        return;
+      }
+
+      onCheckoutDetailsChange(normalizedDetails);
+      onOrderReferenceChange(payload.order.reference);
+    } catch {
+      setCheckoutError("Bestelling kon niet worden voorbereid. Controleer de verbinding en probeer opnieuw.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1583,7 +1623,9 @@ function CheckoutView({
           )}
           <div className="checkout-actions">
             <button className="secondary-button" type="button" onClick={onClearDraft}>Nieuwe configuratie</button>
-            <button className="primary-button" type="submit">Betaling voorbereiden<CreditCard size={18} /></button>
+            <button className="primary-button" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Order wordt voorbereid..." : "Betaling voorbereiden"}<CreditCard size={18} />
+            </button>
           </div>
         </form>
       </div>
