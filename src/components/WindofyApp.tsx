@@ -53,6 +53,17 @@ type LiveGuideResult = {
   confidence?: number;
   issue?: string;
 };
+type DraftState = {
+  activeStep?: FlowStep;
+  selectedWindowId?: string;
+  configuration?: BlindConfiguration;
+  uploadedImageDataUrl?: string | null;
+  uploadedFileName?: string;
+  analysisResult?: AnalysisResult | null;
+  renderedImageDataUrl?: string | null;
+  paymentMethod?: "ideal" | "card";
+  orderReference?: string;
+};
 type AnalysisResult = {
   qualityFailed?: boolean;
   qualityFeedback?: string;
@@ -112,6 +123,7 @@ const statusLabels: Record<WindowStatus, string> = {
 };
 
 const DUTCH_LOCALE = "nl-NL";
+const DRAFT_STORAGE_KEY = "windofy.configurator.draft.v1";
 
 const formatPrice = (cents: number) =>
   new Intl.NumberFormat(DUTCH_LOCALE, { style: "currency", currency: "EUR" }).format(cents / 100);
@@ -145,6 +157,19 @@ function preferredDutchVoice() {
   );
 }
 
+function readDraftState(): DraftState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as DraftState) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function WindofyApp() {
   const [activeStep, setActiveStep] = useState<FlowStep>("Home");
   const [selectedWindowId, setSelectedWindowId] = useState("window-front");
@@ -159,6 +184,9 @@ export function WindofyApp() {
   const [renderedImageDataUrl, setRenderedImageDataUrl] = useState<string | null>(null);
   const [renderStatus, setRenderStatus] = useState<PipelineStatus>("idle");
   const [renderError, setRenderError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
+  const [orderReference, setOrderReference] = useState("");
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const allWindows = useMemo(
     () =>
@@ -188,6 +216,100 @@ export function WindofyApp() {
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
   const goTo = (step: FlowStep) => setActiveStep(step);
   const mountingLabel = configuration.mountingMethod === "inside-recess" ? "in de dag" : "op de dag";
+
+  useEffect(() => {
+    const restoreTimer = window.setTimeout(() => {
+      const draft = readDraftState();
+      if (!draft) {
+        setDraftRestored(true);
+        return;
+      }
+
+      if (draft.activeStep && flowSteps.includes(draft.activeStep)) {
+        setActiveStep(draft.activeStep);
+      }
+      if (draft.selectedWindowId) {
+        setSelectedWindowId(draft.selectedWindowId);
+      }
+      if (draft.configuration) {
+        setConfiguration(draft.configuration);
+      }
+      if (typeof draft.uploadedImageDataUrl !== "undefined") {
+        setUploadedImageDataUrl(draft.uploadedImageDataUrl);
+      }
+      if (draft.uploadedFileName) {
+        setUploadedFileName(draft.uploadedFileName);
+      }
+      if (typeof draft.analysisResult !== "undefined") {
+        setAnalysisResult(draft.analysisResult);
+        if (draft.analysisResult) {
+          setAnalysisStatus("success");
+        }
+      }
+      if (typeof draft.renderedImageDataUrl !== "undefined") {
+        setRenderedImageDataUrl(draft.renderedImageDataUrl);
+        if (draft.renderedImageDataUrl) {
+          setRenderStatus("success");
+        }
+      }
+      if (draft.paymentMethod) {
+        setPaymentMethod(draft.paymentMethod);
+      }
+      if (draft.orderReference) {
+        setOrderReference(draft.orderReference);
+      }
+      setDraftRestored(true);
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!draftRestored) {
+      return;
+    }
+
+    const draft: DraftState = {
+      activeStep,
+      selectedWindowId,
+      configuration,
+      uploadedImageDataUrl,
+      uploadedFileName,
+      analysisResult,
+      renderedImageDataUrl,
+      paymentMethod,
+      orderReference,
+    };
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  }, [
+    activeStep,
+    analysisResult,
+    configuration,
+    draftRestored,
+    orderReference,
+    paymentMethod,
+    renderedImageDataUrl,
+    selectedWindowId,
+    uploadedFileName,
+    uploadedImageDataUrl,
+  ]);
+
+  const clearDraft = () => {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setActiveStep("Home");
+    setSelectedWindowId("window-front");
+    setConfiguration(mockProject.rooms[0].windows[0].configuration!);
+    setUploadedImageDataUrl(null);
+    setUploadedFileName("");
+    setAnalysisResult(null);
+    setAnalysisStatus("idle");
+    setAnalysisError("");
+    setRenderedImageDataUrl(null);
+    setRenderStatus("idle");
+    setRenderError("");
+    setPaymentMethod("ideal");
+    setOrderReference("");
+  };
 
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
     setAnalysisStatus("loading");
@@ -350,7 +472,17 @@ export function WindofyApp() {
             onCheckout={() => goTo("Checkout")}
           />
         )}
-        {activeStep === "Checkout" && <CheckoutView cartItems={cartItems} cartTotal={cartTotal} />}
+        {activeStep === "Checkout" && (
+          <CheckoutView
+            cartItems={cartItems}
+            cartTotal={cartTotal}
+            orderReference={orderReference}
+            paymentMethod={paymentMethod}
+            onClearDraft={clearDraft}
+            onOrderReferenceChange={setOrderReference}
+            onPaymentMethodChange={setPaymentMethod}
+          />
+        )}
       </main>
     </div>
   );
@@ -1183,6 +1315,11 @@ function PreviewView({
 function CheckoutView({
   cartItems,
   cartTotal,
+  orderReference,
+  paymentMethod,
+  onClearDraft,
+  onOrderReferenceChange,
+  onPaymentMethodChange,
 }: {
   cartItems: Array<{
     id: string;
@@ -1192,10 +1329,13 @@ function CheckoutView({
     measurement?: { widthMm: number; heightMm: number };
   }>;
   cartTotal: number;
+  orderReference: string;
+  paymentMethod: "ideal" | "card";
+  onClearDraft: () => void;
+  onOrderReferenceChange: (value: string) => void;
+  onPaymentMethodChange: (value: "ideal" | "card") => void;
 }) {
-  const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
   const [checkoutError, setCheckoutError] = useState("");
-  const [orderReference, setOrderReference] = useState("");
   const missingMeasurements = cartItems.filter((item) => !item.measurement);
 
   const handleCheckoutSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -1217,7 +1357,7 @@ function CheckoutView({
     }
 
     const reference = `WDF-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderReference(reference);
+    onOrderReferenceChange(reference);
   };
 
   return (
@@ -1249,14 +1389,14 @@ function CheckoutView({
             <button
               className={paymentMethod === "ideal" ? "payment-method active" : "payment-method"}
               type="button"
-              onClick={() => setPaymentMethod("ideal")}
+              onClick={() => onPaymentMethodChange("ideal")}
             >
               iDEAL
             </button>
             <button
               className={paymentMethod === "card" ? "payment-method active" : "payment-method"}
               type="button"
-              onClick={() => setPaymentMethod("card")}
+              onClick={() => onPaymentMethodChange("card")}
             >
               Kaart
             </button>
@@ -1272,7 +1412,10 @@ function CheckoutView({
               <span>Referentie {orderReference}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
             </div>
           )}
-          <button className="primary-button wide" type="submit">Betaling voorbereiden<CreditCard size={18} /></button>
+          <div className="checkout-actions">
+            <button className="secondary-button" type="button" onClick={onClearDraft}>Nieuwe configuratie</button>
+            <button className="primary-button" type="submit">Betaling voorbereiden<CreditCard size={18} /></button>
+          </div>
         </form>
       </div>
       <aside className="cart-summary">

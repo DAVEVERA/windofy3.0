@@ -1178,6 +1178,12 @@ textarea {
   accent-color: var(--sage);
 }
 
+.checkout-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.7rem;
+}
+
 .cart-readiness {
   display: grid;
   gap: 0.55rem;
