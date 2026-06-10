@@ -46,6 +46,15 @@ The next implementation pass must generate or attach real product images, save t
 
 The SQL schema is in `supabase/migrations/20260610210000_catalog_account_schema.sql`.
 
+The generated catalog seed is in `supabase/seed/catalog_seed.sql`. Regenerate it from the webshop source data with:
+
+```powershell
+npm run catalog:seed
+npm run catalog:verify
+```
+
+`catalog:verify` must report 240 products and 15 products for every concrete group/subgroup before the seed is applied to Supabase.
+
 Supabase CLI is not installed in this workspace, so the migration file was created manually instead of via `supabase migration new`.
 
 Current Supabase guidance checked on 2026-06-10:

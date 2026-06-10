@@ -12,7 +12,9 @@
     "start:web": "node .next\\standalone\\server.js",
     "start": "next start",
     "lint": "eslint",
-    "smoke": ".venv\\Scripts\\python.exe scripts\\smoke_production.py"
+    "smoke": ".venv\\Scripts\\python.exe scripts\\smoke_production.py",
+    "catalog:seed": "node --experimental-strip-types scripts/generate-catalog-seed.mjs",
+    "catalog:verify": "node --experimental-strip-types -e \"import('./src/data/catalog.ts').then(({catalogCompleteness})=>{if(catalogCompleteness.actualProductCount!==240) throw new Error('Catalog product count mismatch'); const bad=catalogCompleteness.productsPerLeaf.filter(x=>x.count<15); if(bad.length) throw new Error(JSON.stringify(bad)); console.log(JSON.stringify(catalogCompleteness))})\""
   },
   "dependencies": {
     "lucide-react": "^1.17.0",

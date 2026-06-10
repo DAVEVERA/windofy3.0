@@ -1,0 +1,87 @@
+{
+  "generatedFrom": "src/data/catalog.ts",
+  "groups": 11,
+  "subgroups": 6,
+  "products": 240,
+  "completeness": {
+    "requiredLeafProductCount": 240,
+    "actualProductCount": 240,
+    "productsPerLeaf": [
+      {
+        "groupId": "wood-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "aluminium-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "roller-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "duo-roller-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "electric-roller-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "vertical-blinds",
+        "count": 15
+      },
+      {
+        "groupId": "shutters",
+        "count": 15
+      },
+      {
+        "groupId": "insect-screens",
+        "count": 15
+      },
+      {
+        "groupId": "perfect-fit",
+        "count": 15
+      },
+      {
+        "groupId": "roof-window-decoration",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "single-pleat-curtains",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "double-pleat-curtains",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "triple-pleat-curtains",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "eyelet-curtains",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "voile-curtains",
+        "count": 15
+      },
+      {
+        "groupId": "curtains",
+        "subgroupId": "blackout-curtains",
+        "count": 15
+      }
+    ],
+    "imageStatus": {
+      "ready": 0,
+      "pendingGeneration": 240
+    }
+  },
+  "sqlPath": "supabase\\seed\\catalog_seed.sql"
+}
