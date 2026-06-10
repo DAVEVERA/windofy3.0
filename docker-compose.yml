@@ -1,0 +1,45 @@
+services:
+  ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    environment:
+      AI_HOST: 0.0.0.0
+      AI_PORT: 5000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required}
+      VISION_ANALYSIS_MODEL: ${VISION_ANALYSIS_MODEL:-claude-opus-4-1-20250805}
+      VISION_FALLBACK_MODEL: ${VISION_FALLBACK_MODEL:-claude-sonnet-4-5-20250929}
+      RENDER_KEY_PRIMARY: ${RENDER_KEY_PRIMARY:?RENDER_KEY_PRIMARY is required}
+      RENDER_MODEL_PRIMARY: ${RENDER_MODEL_PRIMARY:-gemini-3-pro-image-preview}
+      RENDER_KEY_FALLBACK: ${RENDER_KEY_FALLBACK:-}
+      RENDER_MODEL_FALLBACK: ${RENDER_MODEL_FALLBACK:-gemini-2.5-flash-image}
+      RENDER_HTTP_FALLBACK_KEY: ${RENDER_HTTP_FALLBACK_KEY:-}
+      RENDER_HTTP_FALLBACK_ENDPOINT: ${RENDER_HTTP_FALLBACK_ENDPOINT:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+      SUPABASE_BUCKET: ${SUPABASE_BUCKET:-uploads}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/app/models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      AI_SERVICE_URL: http://ai:5000
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      ai:
+        condition: service_healthy

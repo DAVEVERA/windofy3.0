@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Windofy loader</title>
+
+<style>
+:root {
+  --w: 150px;
+  --h: 110px;
+  --cycle: 8s;
+
+  --wood-1: #6f4324;
+  --wood-2: #a96f3d;
+  --wood-3: #d09a63;
+
+  --linen-1: #d8d0c2;
+  --linen-2: #b9afa0;
+  --linen-3: #8d8274;
+
+  --drape-1: #3f4d42;
+  --drape-2: #6f7f70;
+  --drape-3: #a1ad9f;
+
+  --frame-1: #eef1ed;
+  --frame-2: #ccd5cf;
+  --glass: #dce9e6;
+
+  --cord: #57544d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box; 
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, #ffffff 0%, #f2f4f3 48%, #e6ebe8 100%);
+}
+
+.loader {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  perspective: 520px;
+  contain: layout paint style;
+  isolation: isolate;
+}
+
+.loader *,
+.loader *::before,
+.loader *::after {
+  backface-visibility: hidden;
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.12)),
+    linear-gradient(135deg, var(--frame-1), var(--frame-2));
+  box-shadow:
+    inset 0 0 0 12px rgba(255,255,255,.68),
+    inset 0 0 0 9px rgba(70,85,75,.14),
+    0 18px 35px rgba(25,35,30,.30);
+}
+
+.stage {
+  position: absolute;
+  inset: 9px;
+  overflow: hidden;
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.46), transparent 38%),
+    linear-gradient(180deg, rgba(220,233,230,.55), rgba(255,255,255,.10)),
+    var(--glass);
+  box-shadow: inset 0 0 18px rgba(70,95,90,.14);
+  transform-style: preserve-3d;
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7px;
+  z-index: 40;
+  border-radius: 9px 4px 1px 1px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.12) 0 2px,
+      rgba(0,0,0,.12) 3px,
+      transparent 8px
+    ),
+    linear-gradient(180deg, #8a5931, #5f371d);
+  box-shadow:
+    0 2px 5px rgba(0,0,0,.26),
+    inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+/* shared light */
+
+.light {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  background:
+    radial-gradient(85% 65% at 18% 0%, rgba(255,248,225,.36), transparent 62%),
+    linear-gradient(110deg, rgba(255,255,255,.25), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.12));
+  mix-blend-mode: soft-light;
+}
+
+.glint {
+  position: absolute;
+  inset: 0;
+  z-index: 85;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-130%);
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255,255,255,.38) 46%,
+    transparent 60%
+  );
+  animation: glint var(--cycle) ease-in-out infinite;
+}
+
+/* phase base */
+
+.phase {
+  position: absolute;
+  inset: 7px 0 0;
+  opacity: 0;
+  transform-style: preserve-3d;
+  will-change: opacity, transform;
+}
+
+/* A — houten jaloezie */
+
+.blinds {
+  z-index: -10;
+  animation: phaseBlinds var(--cycle) ease-in-out infinite;
+}
+
+.slats {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  animation: slatLift var(--cycle) cubic-bezier(.66,0,.22,1) infinite;
+}
+
+.slats span {
+  flex: 1;
+  min-height: 0;
+  border-radius: 2px;
+  transform-origin: top center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(0,0,0,.24)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(75,42,20,0) 0,
+      rgba(75,42,20,.28) 3px,
+      rgba(255,226,184,.18) 8px,
+      rgba(75,42,20,0) 17px,
+      rgba(105,62,32,.32) 24px
+    ),
+    linear-gradient(90deg, var(--wood-1), var(--wood-2), var(--wood-3), var(--wood-2));
+  background-blend-mode: multiply, normal, normal;
+  box-shadow:
+    0 2px 3px rgba(0,0,0,.25),
+    inset 0 1px 0 rgba(255,255,255,.22);
+  animation: slatTilt var(--cycle) cubic-bezier(.6,0,.22,1) infinite;
+}
+
+.ladder {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 95%;
+  z-index: 14;
+  transform-origin: top center;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.14), transparent 32%, rgba(255,255,255,.20) 52%, transparent 70%, rgba(0,0,0,.16)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255,255,255,.12) 0 4px,
+      rgba(0,0,0,.12) 6px 8px,
+      transparent 10px 15px
+    ),
+    var(--wood-2);
+  box-shadow: inset 0 0 1px rgba(0,0,0,.10);
+  animation: ladderLift var(--cycle) cubic-bezier(.60,0,.27,1) infinite;
+}
+
+.ladder.left {
+  left: 25px;
+}
+
+.ladder.right {
+  right: 25px;
+}
+
+.pull {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 95%;
+  z-index: 18;
+  transform-origin: top center;
+  background: linear-gradient(180deg, #7b776f, var(--cord));
+}
+
+.pull::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 7px;
+  height: 8px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #77736b, #3e3c38);
+  box-shadow: 0 2px 3px rgba(0,0,0,.22);
+}
+
+.pull.one {
+  right: 13px;
+  animation: pullOne var(--cycle) cubic-bezier(.66,0,.22,1) infinite;
+}
+
+.pull.two {
+  right: 24px;
+  opacity: .75;
+  animation: pullTwo var(--cycle) cubic-bezier(.66,0,.22,1) infinite;
+}
+
+/* B — rolgordijn */
+
+.roller {
+  z-index: 20;
+  animation: phaseRoller var(--cycle) ease-in-out infinite;
+}
+
+.roll-tube {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 9px;
+  z-index: 24;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), transparent 36%),
+    linear-gradient(180deg, #dcd5ca, #a69b8e 56%, #776e63);
+  box-shadow:
+    0 2px 5px rgba(0,0,0,.28),
+    inset 0 1px 1px rgba(255,255,255,.34);
+  animation: tubeThickness var(--cycle) cubic-bezier(.55,0,.18,1) infinite;
+}
+
+.roll-fabric {
+  position: absolute;
+  inset: 0;
+  transform-origin: top center;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.12) 0,
+      rgba(255,255,255,.12) 1px,
+      rgba(0,0,0,.07) 2px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.08) 0,
+      rgba(255,255,255,.08) 1px,
+      rgba(0,0,0,.055) 2px,
+      transparent 5px
+    ),
+    linear-gradient(90deg, rgba(0,0,0,.10), transparent 14%, transparent 86%, rgba(0,0,0,.12)),
+    linear-gradient(180deg, var(--linen-1), var(--linen-2));
+  box-shadow: inset 0 0 12px rgba(0,0,0,.12);
+  animation: fabricDrop var(--cycle) cubic-bezier(.55,0,.18,1) infinite;
+}
+
+.roll-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  z-index: 26;
+  border-radius: 0 0 3px 3px;
+  transform-origin: top center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.26), transparent),
+    linear-gradient(180deg, #a99f91, var(--linen-3));
+  box-shadow: 0 2px 5px rgba(0,0,0,.26);
+  animation:
+    barDrop var(--cycle) cubic-bezier(.55,0,.18,1) infinite,
+    barSettle var(--cycle) cubic-bezier(.34,0,.2,1) infinite;
+}
+
+/* C — overgordijnen */
+
+.drapes {
+  z-index: 30;
+  animation: phaseDrapes var(--cycle) ease-in-out infinite;
+}
+
+.track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  z-index: 38;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(0,0,0,.18)),
+    #74695f;
+  box-shadow: 0 2px 4px rgba(0,0,0,.24);
+  animation: trackIn var(--cycle) ease-in-out infinite;
+}
+
+.drape {
+  position: absolute;
+  top: 4px;
+  width: 58%;
+  height: calc(100% - 4px);
+  overflow: hidden;
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.20), transparent 17%, rgba(0,0,0,.17)),
+    repeating-linear-gradient(
+      90deg,
+      var(--drape-1) 0,
+      var(--drape-2) 7px,
+      var(--drape-3) 11px,
+      var(--drape-2) 16px,
+      var(--drape-1) 24px
+    );
+  box-shadow:
+    inset 0 0 13px rgba(0,0,0,.34),
+    0 5px 10px rgba(0,0,0,.20);
+}
+
+.drape::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0,0,0,.26) 0,
+      rgba(0,0,0,.06) 5px,
+      rgba(255,255,255,.20) 9px,
+      rgba(0,0,0,.12) 14px,
+      rgba(0,0,0,.32) 22px
+    );
+  mix-blend-mode: multiply;
+}
+
+.drape::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 22% at 50% 100%, rgba(0,0,0,.30), transparent 72%),
+    linear-gradient(90deg, rgba(255,255,255,.11), transparent 32%, rgba(0,0,0,.17));
+  opacity: .75;
+}
+
+.drape.left {
+  left: -8%;
+  border-radius: 0 8px 8px 0;
+  transform-origin: left center;
+  animation: drapeLeft var(--cycle) cubic-bezier(.65,0,.18,1) infinite;
+}
+
+.drape.right {
+  right: -8%;
+  border-radius: 8px 0 0 8px;
+  transform-origin: right center;
+  animation: drapeRight var(--cycle) cubic-bezier(.65,0,.18,1) infinite;
+}
+
+/* keyframes */
+
+@keyframes phaseBlinds {
+  0%, 30% { opacity: 1; }
+  36%, 94% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slatTilt {
+  0%, 8% { transform: rotateX(0deg); }
+  15% { transform: rotateX(66deg); }
+  22% { transform: rotateX(-5deg); }
+  28%, 100% { transform: rotateX(0deg); }
+}
+
+@keyframes slatLift {
+  0%, 26% { transform: scaleY(1); }
+  31% { transform: scaleY(.17); }
+  46%, 100% { transform: scaleY(.12); }
+}
+
+@keyframes ladderLift {
+  0%, 25% { transform: scaleY(1); }
+  31% { transform: scaleY(.24); }
+  70%, 100% { transform: scaleY(.10); }
+}
+
+@keyframes pullOne {
+  0%, 8% { transform: scaleY(.38); }
+  15% { transform: scaleY(.31); }
+  25% { transform: scaleY(.38); }
+  34%, 100% { transform: scaleY(.13); }
+}
+
+@keyframes pullTwo {
+  0%, 8% { transform: scaleY(.54); }
+  15% { transform: scaleY(.46); }
+  25% { transform: scaleY(.54); }
+  34%, 100% { transform: scaleY(.16); }
+}
+
+@keyframes phaseRoller {
+  0%, 29% { opacity: 0; }
+  35%, 66% { opacity: 1; }
+  72%, 100% { opacity: 0; }
+}
+
+@keyframes fabricDrop {
+  0%, 31% { transform: scaleY(0); }
+  36% { transform: scaleY(.04); }
+  48% { transform: scaleY(1.018); }
+  54%, 62% { transform: scaleY(1); }
+  69% { transform: scaleY(.06); }
+  73%, 100% { transform: scaleY(0); }
+}
+
+@keyframes tubeThickness {
+  0%, 31% { height: 9px; }
+  36% { height: 9px; }
+  48%, 62% { height: 3px; }
+  69% { height: 8px; }
+  73%, 100% { height: 9px; }
+}
+
+@keyframes barDrop {
+  0%, 31% { top: 0; }
+  36% { top: 0; }
+  48%, 62% { top: calc(100% - 5px); }
+  69% { top: 7px; }
+  73%, 100% { top: 0; }
+}
+
+@keyframes barSettle {
+  0%, 47% { transform: rotate(0deg); }
+  50% { transform: rotate(2.4deg); }
+  52% { transform: rotate(-1.5deg); }
+  54% { transform: rotate(.7deg); }
+  56%, 100% { transform: rotate(0deg); }
+}
+
+@keyframes phaseDrapes {
+  0%, 66% { opacity: 0; }
+  72%, 96% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes trackIn {
+  0%, 66% {
+    transform: translateY(-2px);
+  }
+
+  72%, 96% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes drapeLeft {
+  0%, 66% {
+    transform: translateX(-64%) scaleX(.30) skewY(0deg);
+  }
+
+  72% {
+    transform: translateX(-46%) scaleX(.42) skewY(-.5deg);
+  }
+
+  81% {
+    transform: translateX(-5%) scaleX(1.06) skewY(.7deg);
+  }
+
+  87% {
+    transform: translateX(2%) scaleX(.97) skewY(-.35deg);
+  }
+
+  92%, 96% {
+    transform: translateX(0) scaleX(1) skewY(0deg);
+  }
+
+  100% {
+    transform: translateX(-64%) scaleX(.30) skewY(0deg);
+  }
+}
+
+@keyframes drapeRight {
+  0%, 66% {
+    transform: translateX(64%) scaleX(.30) skewY(0deg);
+  }
+
+  72% {
+    transform: translateX(46%) scaleX(.42) skewY(.5deg);
+  }
+
+  81% {
+    transform: translateX(5%) scaleX(1.06) skewY(-.7deg);
+  }
+
+  87% {
+    transform: translateX(-2%) scaleX(.97) skewY(.35deg);
+  }
+
+  92%, 96% {
+    transform: translateX(0) scaleX(1) skewY(0deg);
+  }
+
+  100% {
+    transform: translateX(64%) scaleX(.30) skewY(0deg);
+  }
+}
+
+@keyframes glint {
+  0%, 31% {
+    opacity: 0;
+    transform: translateX(-130%);
+  }
+
+  36% {
+    opacity: .20;
+    transform: translateX(130%);
+  }
+
+  37%, 67% {
+    opacity: 0;
+    transform: translateX(-130%);
+  }
+
+  72% {
+    opacity: .18;
+    transform: translateX(130%);
+  }
+
+  73%, 96% {
+    opacity: 0;
+    transform: translateX(-130%);
+  }
+
+  100% {
+    opacity: .16;
+    transform: translateX(130%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader *,
+  .loader *::before,
+  .loader *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="loader" role="img" aria-label="Raamdecoratie wordt geladen">
+  <div class="frame">
+    <div class="stage">
+      <div class="rail"></div>
+
+      <div class="phase blinds">
+        <div class="slats">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="ladder left"></div>
+        <div class="ladder right"></div>
+        <div class="pull one"></div>
+        <div class="pull two"></div>
+      </div>
+
+      <div class="phase roller">
+        <div class="roll-fabric"></div>
+        <div class="roll-tube"></div>
+        <div class="roll-bar"></div>
+      </div>
+
+      <div class="phase drapes">
+        <div class="track"></div>
+        <div class="drape left"></div>
+        <div class="drape right"></div>
+      </div>
+
+      <div class="glint"></div>
+      <div class="light"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

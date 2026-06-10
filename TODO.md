@@ -1,0 +1,22 @@
+# TODO
+
+## Goal
+
+Harden the Windofy app across the requested engineering disciplines: AI window analysis/rendering, frontend/mobile/responsive UX, 3D visual quality, backend/API contracts, Supabase readiness, SEO/content, and codebase hygiene.
+
+## Tasks
+
+- [x] Inspect current implementation across frontend, AI service, backend API routes, Docker/runtime, Supabase configuration, SEO metadata, and project hygiene
+- [x] Identify the highest-impact implementation gap
+- [x] Implement the smallest safe change that moves the full objective forward
+- [x] Run narrow verification for the changed area
+- [x] Run broader verification when feasible
+- [x] Update documentation if behavior, setup, or commands changed
+- [x] Add crawlable site identity metadata, robots, sitemap, and conservative Organization/WebSite JSON-LD
+- [x] Audit Supabase/back-end contracts for production data ownership and security readiness
+- [x] Audit mobile purchase flow and checkout responsiveness with browser screenshots
+- [x] Final review
+
+## Completion Marker
+
+ALL_TASKS_COMPLETE: true

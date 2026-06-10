@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.next
+.venv
+data
+models
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.ai-service*.log
+.next-dev*.log

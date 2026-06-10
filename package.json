@@ -1,0 +1,32 @@
+{
+  "name": "windofy-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:ai": ".venv\\Scripts\\python.exe -m src.AI.service",
+    "dev:web": "next dev",
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
+    "start:ai": ".venv\\Scripts\\python.exe -m src.AI.service",
+    "start:web": "node .next\\standalone\\server.js",
+    "start": "next start",
+    "lint": "eslint",
+    "smoke": ".venv\\Scripts\\python.exe scripts\\smoke_production.py"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0",
+    "next": "^16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.7",
+    "playwright": "^1.60.0",
+    "typescript": "^5"
+  }
+}
