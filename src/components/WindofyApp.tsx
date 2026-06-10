@@ -323,6 +323,7 @@ export function WindofyApp() {
             analysisResult={analysisResult}
             selectedWindowId={selectedWindowId}
             onSelectWindow={setSelectedWindowId}
+            onBackToMeasure={() => goTo("Invoer")}
             onContinue={() => goTo("Configuratie")}
           />
         )}
@@ -876,11 +877,13 @@ function ProjectOverview({
   analysisResult,
   selectedWindowId,
   onSelectWindow,
+  onBackToMeasure,
   onContinue,
 }: {
   analysisResult: AnalysisResult | null;
   selectedWindowId: string;
   onSelectWindow: (id: string) => void;
+  onBackToMeasure: () => void;
   onContinue: () => void;
 }) {
   return (
@@ -926,7 +929,7 @@ function ProjectOverview({
         ))}
       </div>
       <div className="section-actions">
-        <button className="secondary-button"><Wand2 size={18} />Terug naar live meten</button>
+        <button className="secondary-button" onClick={onBackToMeasure}><Wand2 size={18} />Terug naar live meten</button>
         <button className="primary-button" onClick={onContinue}>Doorgaan naar configuratie<ArrowRight size={18} /></button>
       </div>
     </section>
@@ -1190,6 +1193,33 @@ function CheckoutView({
   }>;
   cartTotal: number;
 }) {
+  const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [orderReference, setOrderReference] = useState("");
+  const missingMeasurements = cartItems.filter((item) => !item.measurement);
+
+  const handleCheckoutSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCheckoutError("");
+
+    const formData = new FormData(event.currentTarget);
+    const requiredFields = ["name", "email", "postalCode", "houseNumber"];
+    const missingField = requiredFields.find((field) => !String(formData.get(field) || "").trim());
+
+    if (missingField) {
+      setCheckoutError("Vul naam, e-mail, postcode en huisnummer in om de bestelling voor te bereiden.");
+      return;
+    }
+
+    if (missingMeasurements.length) {
+      setCheckoutError("Controleer eerst alle raamafmetingen voordat je de betaling voorbereidt.");
+      return;
+    }
+
+    const reference = `WDF-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    setOrderReference(reference);
+  };
+
   return (
     <section className="flow-section checkout-grid">
       <div>
@@ -1204,6 +1234,46 @@ function CheckoutView({
             <span key={title}><Icon size={17} />{title}</span>
           ))}
         </div>
+        <form className="checkout-form" onSubmit={handleCheckoutSubmit}>
+          <h2>Gegevens voor bestelling</h2>
+          <div className="input-row">
+            <label>Naam<input name="name" autoComplete="name" placeholder="Voor- en achternaam" /></label>
+            <label>E-mail<input name="email" type="email" autoComplete="email" placeholder="naam@voorbeeld.nl" /></label>
+          </div>
+          <div className="input-row">
+            <label>Postcode<input name="postalCode" autoComplete="postal-code" placeholder="1234 AB" /></label>
+            <label>Huisnummer<input name="houseNumber" autoComplete="address-line2" placeholder="12" /></label>
+          </div>
+          <label>Adresregel<input name="address" autoComplete="street-address" placeholder="Straatnaam en plaats" /></label>
+          <div className="payment-methods" role="radiogroup" aria-label="Betaalmethode">
+            <button
+              className={paymentMethod === "ideal" ? "payment-method active" : "payment-method"}
+              type="button"
+              onClick={() => setPaymentMethod("ideal")}
+            >
+              iDEAL
+            </button>
+            <button
+              className={paymentMethod === "card" ? "payment-method active" : "payment-method"}
+              type="button"
+              onClick={() => setPaymentMethod("card")}
+            >
+              Kaart
+            </button>
+          </div>
+          <label className="terms-check">
+            <input name="terms" type="checkbox" required />
+            <span>Ik bevestig dat de raamafmetingen en configuratie gecontroleerd zijn.</span>
+          </label>
+          {checkoutError && <div className="pipeline-notice error">{checkoutError}</div>}
+          {orderReference && (
+            <div className="pipeline-notice success">
+              <strong>Bestelling voorbereid</strong>
+              <span>Referentie {orderReference}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
+            </div>
+          )}
+          <button className="primary-button wide" type="submit">Betaling voorbereiden<CreditCard size={18} /></button>
+        </form>
       </div>
       <aside className="cart-summary">
         <h2>Winkelwagen</h2>
@@ -1217,7 +1287,14 @@ function CheckoutView({
           </div>
         ))}
         <div className="cart-total"><span>Totaal</span><strong>{formatPrice(cartTotal)}</strong></div>
-        <button className="primary-button wide">Betaling voorbereiden<CreditCard size={18} /></button>
+        <div className="cart-readiness">
+          <span><Check size={15} /> Configuratie gekoppeld</span>
+          <span><Check size={15} /> Nederlandse live-guidance actief</span>
+          <span className={missingMeasurements.length ? "warning" : ""}>
+            {missingMeasurements.length ? <CircleAlert size={15} /> : <Check size={15} />}
+            {missingMeasurements.length ? `${missingMeasurements.length} maat ontbreekt` : "Maten gereed"}
+          </span>
+        </div>
       </aside>
       <section className="admin-ready">
         <h2>Admin-ready blocks</h2>
