@@ -190,6 +190,32 @@ const checkoutSteps: IconListItem[] = [
   { title: "Bezorggegevens", Icon: PackageCheck },
   { title: "Betaalmethode", Icon: CreditCard },
 ];
+const journeyGuidance: Partial<Record<FlowStep, { title: string; bullets: string[] }>> = {
+  Keuze: {
+    title: "Kies de invoerroute die past bij je situatie.",
+    bullets: ["Live meten is handig als je onzeker bent over camera of maatvoering.", "Foto uploaden werkt goed wanneer je ramen later rustig per stuk wilt invullen."],
+  },
+  Invoer: {
+    title: "Leg per raam eerst bewijs vast: foto, maat of live AI-check.",
+    bullets: ["Upload meerdere raamfoto's als je alle ramen in een keer wilt klaarzetten.", "De Nederlandse spraakcoach helpt tijdens live meten op basis van wat de camera ziet."],
+  },
+  Ramencheck: {
+    title: "Controleer of elk raam een herkenbare naam en maat heeft.",
+    bullets: ["Pas ruimtenamen aan zodat de order later logisch blijft.", "Ramen zonder maat blijven zichtbaar, maar gaan nog niet mee als bestelregel."],
+  },
+  Configuratie: {
+    title: "Kies per raam een echt catalogusproduct en visualiseer dezelfde keuze.",
+    bullets: ["De prijs gebruikt het gekozen product, het aantal ramen en de gemeten oppervlakte.", "Gebruik 'toepassen op alle ramen' alleen wanneer dezelfde uitvoering overal klopt."],
+  },
+  Checkout: {
+    title: "Controleer prijs, maat en aflevergegevens voordat je betaalt.",
+    bullets: ["Elke regel is gekoppeld aan een raam, maat en catalogusproduct.", "Download de orderreferentie als overdraagbaar controledocument."],
+  },
+  Account: {
+    title: "Bewaar je project en bestel later door.",
+    bullets: ["Je ziet hier ramen, conceptorder en aangevraagde staaltjes terug.", "Vraag kleurstalen aan voor de gevisualiseerde keuzes voordat je definitief bestelt."],
+  },
+};
 
 const statusLabels: Record<WindowStatus, string> = {
   complete: "Compleet",
@@ -717,6 +743,7 @@ export function WindofyApp() {
     <div className="app-shell">
       <StickyHeader activeStep={activeStep} onNavigate={goTo} />
       <main>
+        {activeStep !== "Home" && <JourneyCoach current={activeStep} />}
         {activeStep === "Home" && <HomeView onStart={() => goTo("Keuze")} onExplain={() => goTo("Invoer")} />}
         {activeStep === "Keuze" && <ChoiceView onChooseManual={() => goTo("Invoer")} onChooseVision={() => goTo("Invoer")} />}
         {activeStep === "Invoer" && (
@@ -837,6 +864,25 @@ function StepIndicator({ current }: { current: FlowStep }) {
         <span key={step} className={step === current ? "step-dot active" : "step-dot"} />
       ))}
     </div>
+  );
+}
+
+function JourneyCoach({ current }: { current: FlowStep }) {
+  const guidance = journeyGuidance[current];
+  if (!guidance) {
+    return null;
+  }
+
+  return (
+    <section className="journey-coach" aria-label={`Instructies voor ${current}`}>
+      <span>{current}</span>
+      <strong>{guidance.title}</strong>
+      <ul>
+        {guidance.bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

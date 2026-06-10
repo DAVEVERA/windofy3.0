@@ -40,7 +40,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add My Account environment for saved projects, windows, visualizations, draft orders, later ordering, and sample orders
 - [x] Add color sample ordering per visualized window color
 - [x] Redesign the UI palette and mobile-first layout into a calm, modern, cohesive interface
-- [ ] Add Dutch journey copy, instructions, info bullets, and infotutorial context per phase
+- [x] Add Dutch journey copy, instructions, info bullets, and infotutorial context per phase
 - [ ] Apply codebase-refactor-hygiene-auditor final pass
 - [ ] Final review against every explicit requirement
 
