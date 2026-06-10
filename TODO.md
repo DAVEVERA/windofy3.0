@@ -19,6 +19,8 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Route checkout order preparation through a server-side draft order API
 - [x] Persist and display server draft order metadata after checkout
 - [x] Surface live AI guidance confidence/status and repeatable spoken instruction controls
+- [x] Send live measuring stage context with each AI guidance request
+- [x] Make apply-current-configuration-to-all-windows functional and persistent
 - [x] Final review
 
 ## Completion Marker

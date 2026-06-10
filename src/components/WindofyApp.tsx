@@ -54,10 +54,12 @@ type LiveGuideResult = {
   confidence?: number;
   issue?: string;
 };
+type LiveMeasurementStage = "positioning" | "stability-check" | "measurement-confirmation";
 type LiveGuidanceMeta = {
   language: string;
   confidence: number;
   issue: string;
+  stage: LiveMeasurementStage;
 };
 type DraftState = {
   activeStep?: FlowStep;
@@ -67,6 +69,7 @@ type DraftState = {
   uploadedFileName?: string;
   analysisResult?: AnalysisResult | null;
   renderedImageDataUrl?: string | null;
+  configurationOverrides?: Record<string, BlindConfiguration>;
   paymentMethod?: "ideal" | "card";
   orderReference?: string;
   draftOrder?: PreparedDraftOrder | null;
@@ -171,6 +174,11 @@ const guidanceIssueLabels: Record<string, string> = {
   too_far: "Te ver weg",
   window_cut_off: "Raam valt buiten beeld",
 };
+const measurementStageLabels: Record<LiveMeasurementStage, string> = {
+  positioning: "Positioneren",
+  "stability-check": "Stabiliteit",
+  "measurement-confirmation": "Meetbevestiging",
+};
 
 const DUTCH_LOCALE = "nl-NL";
 const DRAFT_STORAGE_KEY = "windofy.configurator.draft.v1";
@@ -244,6 +252,7 @@ export function WindofyApp() {
   const [renderedImageDataUrl, setRenderedImageDataUrl] = useState<string | null>(null);
   const [renderStatus, setRenderStatus] = useState<PipelineStatus>("idle");
   const [renderError, setRenderError] = useState("");
+  const [configurationOverrides, setConfigurationOverrides] = useState<Record<string, BlindConfiguration>>({});
   const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
   const [orderReference, setOrderReference] = useState("");
   const [draftOrder, setDraftOrder] = useState<PreparedDraftOrder | null>(null);
@@ -256,15 +265,17 @@ export function WindofyApp() {
       mockProject.rooms.flatMap((room) =>
         room.windows.map((window) => {
           const measurement = measurementOverrides[window.id] ?? window.measurement;
+          const windowConfiguration = configurationOverrides[window.id] ?? window.configuration;
           return {
             ...window,
             status: measurement ? window.status === "missing-measurement" ? "needs-review" : window.status : window.status,
             measurement,
+            configuration: windowConfiguration,
             roomName: room.name,
           };
         }),
       ),
-    [measurementOverrides],
+    [configurationOverrides, measurementOverrides],
   );
 
   const selectedWindow = allWindows.find((window) => window.id === selectedWindowId) ?? allWindows[0];
@@ -320,6 +331,9 @@ export function WindofyApp() {
           setRenderStatus("success");
         }
       }
+      if (draft.configurationOverrides) {
+        setConfigurationOverrides(draft.configurationOverrides);
+      }
       if (draft.paymentMethod) {
         setPaymentMethod(draft.paymentMethod);
       }
@@ -354,6 +368,7 @@ export function WindofyApp() {
       uploadedFileName,
       analysisResult,
       renderedImageDataUrl,
+      configurationOverrides,
       paymentMethod,
       orderReference,
       draftOrder,
@@ -366,6 +381,7 @@ export function WindofyApp() {
     analysisResult,
     checkoutDetails,
     configuration,
+    configurationOverrides,
     draftOrder,
     draftRestored,
     orderReference,
@@ -390,6 +406,7 @@ export function WindofyApp() {
     setRenderedImageDataUrl(null);
     setRenderStatus("idle");
     setRenderError("");
+    setConfigurationOverrides({});
     setPaymentMethod("ideal");
     setOrderReference("");
     setDraftOrder(null);
@@ -402,6 +419,22 @@ export function WindofyApp() {
       ...current,
       [windowId]: measurement,
     }));
+  };
+
+  const handleApplyConfigurationToAll = () => {
+    const nextOverrides = allWindows.reduce<Record<string, BlindConfiguration>>((overrides, window) => {
+      if (!window.measurement) {
+        return overrides;
+      }
+
+      overrides[window.id] = {
+        ...configuration,
+        id: `${configuration.id}-${window.id}`,
+      };
+      return overrides;
+    }, {});
+
+    setConfigurationOverrides(nextOverrides);
   };
 
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
@@ -452,14 +485,18 @@ export function WindofyApp() {
   const handleLiveFrameAnalyze = (imageDataUrl: string) =>
     analyzeImageDataUrl(imageDataUrl, `Live camera frame ${new Date().toLocaleTimeString(DUTCH_LOCALE)}`);
 
-  const handleLiveGuidance = async (imageDataUrl: string, previousInstruction: string) => {
+  const handleLiveGuidance = async (
+    imageDataUrl: string,
+    previousInstruction: string,
+    measurementStage: LiveMeasurementStage,
+  ) => {
     const response = await fetch("/api/ai/live-guide", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         imageDataUrl,
         previousInstruction,
-        measurementStage: "positioning",
+        measurementStage,
       }),
     });
     const payload = await response.json();
@@ -563,6 +600,7 @@ export function WindofyApp() {
             renderedImageDataUrl={renderedImageDataUrl}
             renderStatus={renderStatus}
             renderError={renderError}
+            onApplyToAll={handleApplyConfigurationToAll}
             onRender={handleRenderPreview}
             onCheckout={() => goTo("Checkout")}
           />
@@ -744,7 +782,11 @@ function InputView({
   analysisStatus: PipelineStatus;
   onContinue: () => void;
   onLiveFrameAnalyze: (imageDataUrl: string) => Promise<void>;
-  onLiveGuidance: (imageDataUrl: string, previousInstruction: string) => Promise<LiveGuideResult>;
+  onLiveGuidance: (
+    imageDataUrl: string,
+    previousInstruction: string,
+    measurementStage: LiveMeasurementStage,
+  ) => Promise<LiveGuideResult>;
   onPhotoUpload: (file: File) => void;
   uploadedFileName: string;
   uploadedImageDataUrl: string | null;
@@ -877,9 +919,14 @@ function InputView({
     guideInFlightRef.current = true;
     setVoiceGuideStatus("loading");
     setVoiceGuideError("");
+    const measurementStage: LiveMeasurementStage = measurementReady
+      ? "measurement-confirmation"
+      : liveGuidanceMeta
+        ? "stability-check"
+        : "positioning";
 
     try {
-      const guidance = await onLiveGuidance(imageDataUrl, lastInstructionRef.current);
+      const guidance = await onLiveGuidance(imageDataUrl, lastInstructionRef.current, measurementStage);
       const instruction = guidance.instruction?.trim() || "Houd de camera stil en richt hem op het hele raam.";
       lastInstructionRef.current = instruction;
       setLiveInstruction(instruction);
@@ -887,6 +934,7 @@ function InputView({
         language: guidance.language || DUTCH_LOCALE,
         confidence: typeof guidance.confidence === "number" ? guidance.confidence : 0,
         issue: guidance.issue || "none",
+        stage: measurementStage,
       });
       setMeasurementReady(Boolean(guidance.measurementReady));
       setVoiceGuideStatus("success");
@@ -959,6 +1007,7 @@ function InputView({
               </button>
               {liveGuidanceMeta && (
                 <div className="live-guidance-meta" aria-label="Live AI meetstatus">
+                  <span>Fase <strong>{measurementStageLabels[liveGuidanceMeta.stage]}</strong></span>
                   <span>Taal <strong>{liveGuidanceMeta.language}</strong></span>
                   <span>Zekerheid <strong>{formatConfidence(liveGuidanceMeta.confidence)}</strong></span>
                   <span>Status <strong>{guidanceIssueLabels[liveGuidanceMeta.issue] ?? liveGuidanceMeta.issue}</strong></span>
@@ -1477,6 +1526,7 @@ function PreviewView({
   renderedImageDataUrl,
   renderStatus,
   renderError,
+  onApplyToAll,
   onRender,
   onCheckout,
 }: {
@@ -1489,11 +1539,18 @@ function PreviewView({
   renderedImageDataUrl: string | null;
   renderStatus: PipelineStatus;
   renderError: string;
+  onApplyToAll: () => void;
   onRender: () => void;
   onCheckout: () => void;
 }) {
   const isRendering = renderStatus === "loading";
   const stageImage = renderedImageDataUrl ?? uploadedImageDataUrl;
+  const [applyMessage, setApplyMessage] = useState("");
+
+  const applyCurrentConfigurationToAll = () => {
+    onApplyToAll();
+    setApplyMessage("Configuratie toegepast op alle ramen met bekende afmetingen.");
+  };
 
   return (
     <section className="preview-shell">
@@ -1530,7 +1587,8 @@ function PreviewView({
           <span>Belichting</span><strong>{selectedLighting}</strong>
           <span>Bediening</span><strong>{configuration.controlSide === "left" ? "Links" : "Rechts"}</strong>
         </div>
-        <button className="secondary-button wide">Toepassen op alle ramen</button>
+        {applyMessage && <div className="pipeline-notice success">{applyMessage}</div>}
+        <button className="secondary-button wide" onClick={applyCurrentConfigurationToAll}>Toepassen op alle ramen</button>
         <button className="primary-button wide" onClick={onCheckout}>Naar winkelwagen<ShoppingBag size={18} /></button>
       </aside>
     </section>
