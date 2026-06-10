@@ -1,5 +1,24 @@
 export type WindowStatus = "complete" | "missing-photo" | "missing-measurement" | "needs-review";
-export type ProductTypeId = "wood-blinds" | "aluminium-blinds";
+export type CatalogGroupId =
+  | "wood-blinds"
+  | "aluminium-blinds"
+  | "roller-blinds"
+  | "duo-roller-blinds"
+  | "electric-roller-blinds"
+  | "curtains"
+  | "vertical-blinds"
+  | "shutters"
+  | "insect-screens"
+  | "perfect-fit"
+  | "roof-window-decoration";
+export type CatalogSubgroupId =
+  | "single-pleat-curtains"
+  | "double-pleat-curtains"
+  | "triple-pleat-curtains"
+  | "eyelet-curtains"
+  | "voile-curtains"
+  | "blackout-curtains";
+export type ProductTypeId = CatalogGroupId;
 export type MaterialId = "oak" | "walnut" | "matte-aluminium" | "brushed-aluminium";
 export type ControlSide = "left" | "right";
 export type LadderKind = "ladder-tape" | "ladder-cord";
@@ -121,6 +140,58 @@ export interface ProductType {
   id: ProductTypeId;
   name: string;
   description: string;
+}
+
+export interface CatalogGroup {
+  id: CatalogGroupId;
+  name: string;
+  description: string;
+  customerPromise: string;
+  measureNote: string;
+  visualizationMode: "slats" | "fabric" | "panels" | "mesh" | "frame" | "roof-system";
+  minimumProductsRequired: number;
+  sourceUrls: string[];
+}
+
+export interface CatalogSubgroup {
+  id: CatalogSubgroupId;
+  groupId: CatalogGroupId;
+  name: string;
+  description: string;
+  customerPromise: string;
+  minimumProductsRequired: number;
+}
+
+export interface CatalogProductImage {
+  status: "pending-generation" | "ready";
+  alt: string;
+  prompt: string;
+  url?: string;
+  referenceSourceUrl?: string;
+}
+
+export interface CatalogProduct {
+  id: string;
+  groupId: CatalogGroupId;
+  subgroupId?: CatalogSubgroupId;
+  name: string;
+  shortDescription: string;
+  materialFamily: string;
+  colorName: string;
+  colorHex: string;
+  transparency: "transparant" | "lichtdoorlatend" | "privacy" | "verduisterend";
+  controlType: "koord" | "ketting" | "stang" | "motor" | "handgreep" | "vast";
+  compatibleMountingMethods: MountingMethod[];
+  sampleAvailable: boolean;
+  basePriceCents: number;
+  pricePerSquareMeterCents: number;
+  minWidthMm: number;
+  maxWidthMm: number;
+  minHeightMm: number;
+  maxHeightMm: number;
+  image: CatalogProductImage;
+  commerceBullets: string[];
+  measurementWarnings: string[];
 }
 
 export interface Material {

@@ -27,7 +27,20 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add downloadable order summary export after draft order preparation
 - [x] Add server-side payment session preparation and redirect-ready payment page
 - [x] Remove customer-facing demo/mock wording from the production runtime UI
-- [x] Final review
+- [x] Add broad catalog/account domain model for all requested window-decoration categories
+- [x] Add local catalog seed with 15 products per concrete product group/subgroup
+- [x] Add Supabase catalog/account/project/window/sample-order schema draft with RLS and explicit grants
+- [ ] Generate, store, inspect, and approve accurate product images for every catalog product
+- [ ] Connect catalog products to the configurator product choices
+- [ ] Replace hardcoded checkout pricing with catalog-driven per-window pricing and real window count
+- [ ] Merge configuration and visualization into one customer step
+- [ ] Support multi-window photo upload route with dimensions per window and saved project state
+- [ ] Add My Account environment for saved projects, windows, visualizations, draft orders, later ordering, and sample orders
+- [ ] Add color sample ordering per visualized window color
+- [ ] Redesign the UI palette and mobile-first layout into a calm, modern, cohesive interface
+- [ ] Add Dutch journey copy, instructions, info bullets, and infotutorial context per phase
+- [ ] Apply codebase-refactor-hygiene-auditor final pass
+- [ ] Final review against every explicit requirement
 
 ## Completion Marker
 
