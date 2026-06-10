@@ -1612,6 +1612,8 @@ function PreviewView({
 }) {
   const isRendering = renderStatus === "loading";
   const stageImage = renderedImageDataUrl ?? uploadedImageDataUrl;
+  const hasBeforeAfter = Boolean(uploadedImageDataUrl && renderedImageDataUrl);
+  const [comparisonPosition, setComparisonPosition] = useState(62);
   const [applyMessage, setApplyMessage] = useState("");
 
   const applyCurrentConfigurationToAll = () => {
@@ -1623,7 +1625,21 @@ function PreviewView({
     <section className="preview-shell">
       <div className="preview-stage">
         <StepIndicator current="Preview" />
-        {stageImage ? (
+        {hasBeforeAfter ? (
+          <div
+            className="real-render-stage before-after-stage"
+            style={{ ["--compare-position" as string]: `${comparisonPosition}%` }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="compare-image before" src={uploadedImageDataUrl!} alt="Originele raamfoto voor vergelijking" />
+            <div className="compare-after">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="compare-image after" src={renderedImageDataUrl!} alt="AI visualisatie na configuratie" />
+            </div>
+            <i className="compare-divider" aria-hidden="true" />
+            <span>Voor / na vergelijking</span>
+          </div>
+        ) : stageImage ? (
           <div className="real-render-stage">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={stageImage} alt={renderedImageDataUrl ? "Gegenereerde raamdecoratie visualisatie" : "Originele raamfoto"} />
@@ -1646,7 +1662,15 @@ function PreviewView({
         {!uploadedImageDataUrl && <div className="pipeline-notice muted">Upload eerst een raamfoto bij Invoer.</div>}
         <div className="before-after">
           <span>Voor</span>
-          <input type="range" min="0" max="100" defaultValue="62" aria-label="Voor na slider" />
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={comparisonPosition}
+            disabled={!hasBeforeAfter}
+            aria-label="Voor na slider"
+            onChange={(event) => setComparisonPosition(Number(event.target.value))}
+          />
           <span>Na</span>
         </div>
         <div className="summary-list">
