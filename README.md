@@ -38,6 +38,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_KEY
 ```
 
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are browser-safe and power Supabase Auth in the Account screen. Keep `SUPABASE_KEY` server-side only.
+
 Do not commit `.env`.
 
 ## Run locally

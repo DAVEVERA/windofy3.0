@@ -82,10 +82,19 @@ Current behavior:
 - Uses the authenticated user's token for PostgREST calls so RLS ownership policies remain active.
 - Returns `401` when the browser has no login token yet; local browser draft persistence remains the fallback.
 
-Frontend token note:
+Frontend auth flow:
 
-- The current UI reads a future access token from `localStorage["windofy.supabase.accessToken"]`.
-- Once the real Supabase Auth client is added, that storage bridge should be replaced by the official session getter.
+- The Account UI uses the official Supabase browser client from `@supabase/supabase-js`.
+- Customers request a magic link through `supabase.auth.signInWithOtp`.
+- Cloud sync reads the current session through `supabase.auth.getSession()` and sends the official access token to the server route.
+- The temporary `localStorage["windofy.supabase.accessToken"]` bridge has been removed.
+
+`POST /api/samples/sync` uses the same server-side Auth/RLS pattern for color samples:
+
+- Requires `SUPABASE_URL`, server-side `SUPABASE_KEY`, and a Supabase Auth bearer token.
+- Inserts a submitted `sample_orders` row for the authenticated user.
+- Inserts `sample_order_items` for the selected catalog product colors.
+- Keeps sample pricing at `0` cents until shipping/payment rules are finalized.
 
 ## Pricing Model
 
@@ -97,4 +106,4 @@ quantity = one configured product per measured window
 project total = sum(window unit prices)
 ```
 
-The existing checkout still uses a temporary hardcoded price calculation. Replacing that with catalog-driven pricing is the next commerce-critical step.
+Checkout and Account totals use catalog-driven per-window pricing for every configured window. Payment-provider settlement is still a separate production integration.

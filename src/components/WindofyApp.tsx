@@ -41,6 +41,12 @@ import {
 } from "@/data/mockWindofy";
 import type { BlindConfiguration, Measurement, WindowOpening, WindowStatus } from "@/domain/types";
 import { priceWindowConfiguration } from "@/lib/pricing";
+import {
+  getSupabaseAccessToken,
+  getSupabaseBrowserClient,
+  isSupabaseBrowserConfigured,
+  type SupabaseSession,
+} from "@/lib/supabaseBrowser";
 
 const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Checkout", "Account"] as const;
 type FlowStep = (typeof flowSteps)[number];
@@ -130,6 +136,16 @@ type ProjectSyncResponse = {
     savedConfigurations: number;
   };
 };
+type SampleSyncResponse = {
+  ok?: boolean;
+  error?: string;
+  mode?: "local-only";
+  sampleOrder?: {
+    id: string;
+    itemCount: number;
+  };
+};
+type AuthStatus = "unconfigured" | "signed-out" | "signed-in";
 type PreparedDraftOrder = {
   id: string;
   reference: string;
@@ -148,6 +164,7 @@ type SampleRequest = {
   catalogProductId: string;
   catalogProductName: string;
   colorName: string;
+  colorHex: string;
   requestedAt: string;
 };
 type AnalysisResult = {
@@ -308,14 +325,6 @@ function readDraftState(): DraftState | null {
   }
 }
 
-function readSupabaseAccessToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.localStorage.getItem("windofy.supabase.accessToken") ?? "";
-}
-
 export function WindofyApp() {
   const [activeStep, setActiveStep] = useState<FlowStep>("Home");
   const [selectedWindowId, setSelectedWindowId] = useState("window-front");
@@ -339,6 +348,10 @@ export function WindofyApp() {
   const [roomNameOverrides, setRoomNameOverrides] = useState<Record<string, string>>({});
   const [sampleRequests, setSampleRequests] = useState<SampleRequest[]>([]);
   const [customWindows, setCustomWindows] = useState<WindowOpening[]>([]);
+  const [supabaseSession, setSupabaseSession] = useState<SupabaseSession | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(
+    isSupabaseBrowserConfigured() ? "signed-out" : "unconfigured",
+  );
   const [draftRestored, setDraftRestored] = useState(false);
 
   const allWindows = useMemo(
@@ -467,6 +480,25 @@ export function WindofyApp() {
   }, []);
 
   useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      return;
+    }
+
+    void client.auth.getSession().then(({ data }) => {
+      setSupabaseSession(data.session);
+      setAuthStatus(data.session ? "signed-in" : "signed-out");
+    });
+
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      setSupabaseSession(session);
+      setAuthStatus(session ? "signed-in" : "signed-out");
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (!draftRestored) {
       return;
     }
@@ -586,6 +618,7 @@ export function WindofyApp() {
       }
 
       const colorName = item.catalogColorName ?? selectedColor?.name ?? catalogProductName.split(" ").at(-1) ?? "Gekozen kleur";
+      const colorHex = item.catalogColorHex ?? selectedColor?.hex ?? "#f2eee6";
       return [
         ...current,
         {
@@ -596,6 +629,7 @@ export function WindofyApp() {
           catalogProductId,
           catalogProductName,
           colorName,
+          colorHex,
           requestedAt: new Date().toISOString(),
         },
       ];
@@ -603,7 +637,7 @@ export function WindofyApp() {
   };
 
   const handleProjectCloudSync = async () => {
-    const accessToken = readSupabaseAccessToken();
+    const accessToken = await getSupabaseAccessToken();
     const response = await fetch("/api/projects/sync", {
       method: "POST",
       headers: {
@@ -632,6 +666,60 @@ export function WindofyApp() {
       throw new Error(payload?.error ?? "Project kon niet in de cloud worden opgeslagen.");
     }
     return payload;
+  };
+
+  const handleSampleCloudSync = async () => {
+    const accessToken = await getSupabaseAccessToken();
+    const response = await fetch("/api/samples/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({
+        items: sampleRequests.map((request) => ({
+          productId: request.catalogProductId,
+          windowId: request.windowId,
+          colorName: request.colorName,
+          colorHex: request.colorHex,
+          quantity: 1,
+        })),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as SampleSyncResponse | null;
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error ?? "Staaltjes konden niet in de cloud worden opgeslagen.");
+    }
+    return payload;
+  };
+
+  const handleMagicLinkSignIn = async (email: string) => {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      throw new Error("Supabase Auth is nog niet geconfigureerd voor de browser.");
+    }
+
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
+    });
+    if (error) {
+      throw error;
+    }
+  };
+
+  const handleSignOut = async () => {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      return;
+    }
+
+    const { error } = await client.auth.signOut();
+    if (error) {
+      throw error;
+    }
   };
 
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
@@ -863,11 +951,16 @@ export function WindofyApp() {
             cartItems={cartItems}
             cartTotal={cartTotal}
             draftOrder={draftOrder}
+            authEmail={supabaseSession?.user.email}
+            authStatus={authStatus}
             orderReference={orderReference}
             sampleRequests={sampleRequests}
             onContinueConfig={() => goTo("Ramencheck")}
             onCloudSync={handleProjectCloudSync}
             onOrderLater={() => goTo("Checkout")}
+            onSignIn={handleMagicLinkSignIn}
+            onSignOut={handleSignOut}
+            onSampleCloudSync={handleSampleCloudSync}
             onSampleRequest={handleSampleRequest}
           />
         )}
@@ -1982,6 +2075,8 @@ function VisualizationCanvas({ color, label }: { color: string; label: string })
 
 function AccountView({
   allWindows,
+  authEmail,
+  authStatus,
   cartItems,
   cartTotal,
   draftOrder,
@@ -1990,9 +2085,14 @@ function AccountView({
   onContinueConfig,
   onCloudSync,
   onOrderLater,
+  onSignIn,
+  onSignOut,
+  onSampleCloudSync,
   onSampleRequest,
 }: {
   allWindows: Array<WindowOpening & { roomName: string }>;
+  authEmail?: string;
+  authStatus: AuthStatus;
   cartItems: CheckoutCartItem[];
   cartTotal: number;
   draftOrder: PreparedDraftOrder | null;
@@ -2001,14 +2101,28 @@ function AccountView({
   onContinueConfig: () => void;
   onCloudSync: () => Promise<ProjectSyncResponse>;
   onOrderLater: () => void;
+  onSignIn: (email: string) => Promise<void>;
+  onSignOut: () => Promise<void>;
+  onSampleCloudSync: () => Promise<SampleSyncResponse>;
   onSampleRequest: (item: CheckoutCartItem) => void;
 }) {
   const completedWindows = allWindows.filter((window) => window.measurement && window.configuration).length;
   const reference = draftOrder?.reference ?? orderReference;
   const [syncStatus, setSyncStatus] = useState<PipelineStatus>("idle");
   const [syncMessage, setSyncMessage] = useState("");
+  const [sampleSyncStatus, setSampleSyncStatus] = useState<PipelineStatus>("idle");
+  const [sampleSyncMessage, setSampleSyncMessage] = useState("");
+  const [authEmailInput, setAuthEmailInput] = useState(authEmail ?? "");
+  const [authActionStatus, setAuthActionStatus] = useState<PipelineStatus>("idle");
+  const [authMessage, setAuthMessage] = useState("");
 
   const syncProject = async () => {
+    if (authStatus !== "signed-in") {
+      setSyncStatus("error");
+      setSyncMessage("Log eerst in met Supabase Auth om dit project in Mijn account op te slaan.");
+      return;
+    }
+
     setSyncStatus("loading");
     setSyncMessage("");
     try {
@@ -2018,6 +2132,59 @@ function AccountView({
     } catch (error) {
       setSyncStatus("error");
       setSyncMessage(error instanceof Error ? error.message : "Cloud sync is mislukt.");
+    }
+  };
+
+  const syncSamples = async () => {
+    if (authStatus !== "signed-in") {
+      setSampleSyncStatus("error");
+      setSampleSyncMessage("Log eerst in met Supabase Auth om staaltjes in Mijn account op te slaan.");
+      return;
+    }
+
+    setSampleSyncStatus("loading");
+    setSampleSyncMessage("");
+    try {
+      const payload = await onSampleCloudSync();
+      setSampleSyncStatus("success");
+      setSampleSyncMessage(`Staaltjes opgeslagen: ${payload.sampleOrder?.itemCount ?? 0} items.`);
+    } catch (error) {
+      setSampleSyncStatus("error");
+      setSampleSyncMessage(error instanceof Error ? error.message : "Staaltjes sync is mislukt.");
+    }
+  };
+
+  const requestMagicLink = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const email = authEmailInput.trim();
+    if (!email) {
+      setAuthActionStatus("error");
+      setAuthMessage("Vul je e-mailadres in.");
+      return;
+    }
+
+    setAuthActionStatus("loading");
+    setAuthMessage("");
+    try {
+      await onSignIn(email);
+      setAuthActionStatus("success");
+      setAuthMessage("Check je e-mail voor de loginlink. Na bevestiging wordt je sessie automatisch herkend.");
+    } catch (error) {
+      setAuthActionStatus("error");
+      setAuthMessage(error instanceof Error ? error.message : "Loginlink kon niet worden verzonden.");
+    }
+  };
+
+  const signOut = async () => {
+    setAuthActionStatus("loading");
+    setAuthMessage("");
+    try {
+      await onSignOut();
+      setAuthActionStatus("success");
+      setAuthMessage("Je bent uitgelogd.");
+    } catch (error) {
+      setAuthActionStatus("error");
+      setAuthMessage(error instanceof Error ? error.message : "Uitloggen is mislukt.");
     }
   };
 
@@ -2071,6 +2238,41 @@ function AccountView({
       </div>
       <aside className="cart-summary">
         <h2>Later bestellen</h2>
+        <div className="auth-panel">
+          <strong>Mijn account</strong>
+          {authStatus === "unconfigured" ? (
+            <span>Inloggen is nog niet actief in deze omgeving.</span>
+          ) : authStatus === "signed-in" ? (
+            <>
+              <span>Ingelogd als {authEmail ?? "Supabase gebruiker"}.</span>
+              <button className="secondary-button wide" type="button" disabled={authActionStatus === "loading"} onClick={signOut}>
+                Uitloggen
+              </button>
+            </>
+          ) : (
+            <form className="auth-form" onSubmit={requestMagicLink}>
+              <label>
+                E-mail voor Mijn account
+                <input
+                  autoComplete="email"
+                  inputMode="email"
+                  type="email"
+                  value={authEmailInput}
+                  onChange={(event) => setAuthEmailInput(event.target.value)}
+                  placeholder="naam@voorbeeld.nl"
+                />
+              </label>
+              <button className="secondary-button wide" disabled={authActionStatus === "loading"} type="submit">
+                {authActionStatus === "loading" ? "Loginlink sturen..." : "Loginlink sturen"}
+              </button>
+            </form>
+          )}
+          {authMessage && (
+            <div className={authActionStatus === "success" ? "pipeline-notice success" : "pipeline-notice error"}>
+              {authMessage}
+            </div>
+          )}
+        </div>
         <div className="cart-total"><span>Projecttotaal</span><strong>{formatPrice(cartTotal)}</strong></div>
         <div className="cart-readiness">
           <span><Check size={15} /> Opgeslagen in deze browser</span>
@@ -2106,6 +2308,14 @@ function AccountView({
             <span>Nog geen staaltjes<strong>Kies per raam een gevisualiseerde kleur</strong></span>
           )}
         </div>
+        <button className="secondary-button wide" type="button" disabled={!sampleRequests.length || sampleSyncStatus === "loading"} onClick={syncSamples}>
+          {sampleSyncStatus === "loading" ? "Staaltjes opslaan..." : "Staaltjes in Mijn account opslaan"}<Save size={18} />
+        </button>
+        {sampleSyncMessage && (
+          <div className={sampleSyncStatus === "success" ? "pipeline-notice success" : "pipeline-notice error"}>
+            {sampleSyncMessage}
+          </div>
+        )}
       </section>
     </section>
   );
