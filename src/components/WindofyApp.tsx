@@ -38,6 +38,7 @@ import {
   slatWidths,
 } from "@/data/mockWindofy";
 import type { BlindConfiguration, Measurement, WindowOpening, WindowStatus } from "@/domain/types";
+import { priceWindowConfiguration } from "@/lib/pricing";
 
 const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Preview", "Checkout"] as const;
 type FlowStep = (typeof flowSteps)[number];
@@ -90,6 +91,9 @@ type CheckoutCartItem = {
   roomName: string;
   windowName: string;
   price: number;
+  catalogProductId?: string;
+  catalogProductName?: string;
+  areaSquareMeters?: number;
   measurement?: Measurement;
   configuration?: BlindConfiguration;
 };
@@ -299,14 +303,23 @@ export function WindofyApp() {
   const selectedLighting = lightingModes.find((mode) => mode.id === configuration.lightingModeId);
   const cartItems: CheckoutCartItem[] = allWindows
     .filter((window) => window.measurement && (window.configuration || window.id === selectedWindowId))
-    .map((window, index) => ({
-      id: `cart-${window.id}`,
-      roomName: window.roomName,
-      windowName: window.name,
-      price: index === 0 ? 38900 : 30900,
-      measurement: window.measurement,
-      configuration: window.id === selectedWindowId ? configuration : window.configuration,
-    }));
+    .map((window) => {
+      const itemConfiguration = window.id === selectedWindowId ? configuration : window.configuration;
+      const pricedWindow = itemConfiguration && window.measurement
+        ? priceWindowConfiguration(itemConfiguration, window.measurement)
+        : null;
+      return {
+        id: `cart-${window.id}`,
+        roomName: window.roomName,
+        windowName: window.name,
+        price: pricedWindow?.totalCents ?? 0,
+        catalogProductId: pricedWindow?.product.id,
+        catalogProductName: pricedWindow?.product.name,
+        areaSquareMeters: pricedWindow?.areaSquareMeters,
+        measurement: window.measurement,
+        configuration: itemConfiguration,
+      };
+    });
   const cartTotal = cartItems.reduce((total, item) => total + item.price, 0);
   const goTo = (step: FlowStep) => setActiveStep(step);
   const mountingLabel = configuration.mountingMethod === "inside-recess" ? "in de dag" : "op de dag";
@@ -1762,6 +1775,9 @@ function CheckoutView({
           roomName: item.roomName,
           windowName: item.windowName,
           priceCents: item.price,
+          catalogProductId: item.catalogProductId,
+          catalogProductName: item.catalogProductName,
+          areaSquareMeters: item.areaSquareMeters,
           measurement: item.measurement,
           configuration: item.configuration,
         })),
@@ -1814,6 +1830,9 @@ function CheckoutView({
             roomName: item.roomName,
             windowName: item.windowName,
             price: item.price,
+            catalogProductId: item.catalogProductId,
+            catalogProductName: item.catalogProductName,
+            areaSquareMeters: item.areaSquareMeters,
             measurement: item.measurement,
             configuration: item.configuration,
           })),
@@ -1955,6 +1974,12 @@ function CheckoutView({
             <div>
               <strong>{item.windowName}</strong>
               <span>{item.roomName} - {item.measurement ? `${item.measurement.widthMm} x ${item.measurement.heightMm} mm` : "maat ontbreekt"}</span>
+              {item.catalogProductName && (
+                <span>
+                  {item.catalogProductName}
+                  {typeof item.areaSquareMeters === "number" ? ` - ${item.areaSquareMeters.toFixed(2)} m2` : ""}
+                </span>
+              )}
             </div>
             <strong>{formatPrice(item.price)}</strong>
           </div>

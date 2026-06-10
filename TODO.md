@@ -32,7 +32,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add Supabase catalog/account/project/window/sample-order schema draft with RLS and explicit grants
 - [ ] Generate, store, inspect, and approve accurate product images for every catalog product
 - [ ] Connect catalog products to the configurator product choices
-- [ ] Replace hardcoded checkout pricing with catalog-driven per-window pricing and real window count
+- [x] Replace hardcoded checkout pricing with catalog-driven per-window pricing and real window count
 - [ ] Merge configuration and visualization into one customer step
 - [ ] Support multi-window photo upload route with dimensions per window and saved project state
 - [ ] Add My Account environment for saved projects, windows, visualizations, draft orders, later ordering, and sample orders
