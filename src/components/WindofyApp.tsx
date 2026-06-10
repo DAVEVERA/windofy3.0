@@ -41,7 +41,7 @@ import {
 import type { BlindConfiguration, Measurement, WindowOpening, WindowStatus } from "@/domain/types";
 import { priceWindowConfiguration } from "@/lib/pricing";
 
-const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Preview", "Checkout", "Account"] as const;
+const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Checkout", "Account"] as const;
 type FlowStep = (typeof flowSteps)[number];
 type IconListItem = {
   title: string;
@@ -689,23 +689,15 @@ export function WindofyApp() {
         {activeStep === "Configuratie" && (
           <ConfiguratorView
             configuration={configuration}
-            selectedWindow={selectedWindow}
-            onChange={setConfiguration}
-            onPreview={() => goTo("Preview")}
-          />
-        )}
-        {activeStep === "Preview" && (
-          <PreviewView
-            configuration={configuration}
-            selectedWindow={selectedWindow}
-            selectedColor={selectedColor?.hex ?? "#C59B62"}
-            selectedMaterial={selectedMaterial?.name ?? "Materiaal"}
-            selectedLighting={selectedLighting?.name ?? "Bewolkt"}
-            uploadedImageDataUrl={uploadedImageDataUrl}
+            renderError={renderError}
             renderedImageDataUrl={renderedImageDataUrl}
             renderStatus={renderStatus}
-            renderError={renderError}
+            selectedWindow={selectedWindow}
+            selectedLighting={selectedLighting?.name ?? "Bewolkt"}
+            selectedMaterial={selectedMaterial?.name ?? "Materiaal"}
+            uploadedImageDataUrl={uploadedImageDataUrl}
             onApplyToAll={handleApplyConfigurationToAll}
+            onChange={setConfiguration}
             onRender={handleRenderPreview}
             onCheckout={() => goTo("Checkout")}
           />
@@ -1517,30 +1509,112 @@ function StatusBadge({ status }: { status: WindowStatus }) {
 
 function ConfiguratorView({
   configuration,
+  renderError,
+  renderedImageDataUrl,
+  renderStatus,
   selectedWindow,
+  selectedLighting,
+  selectedMaterial,
+  uploadedImageDataUrl,
+  onApplyToAll,
   onChange,
-  onPreview,
+  onCheckout,
+  onRender,
 }: {
   configuration: BlindConfiguration;
+  renderError: string;
+  renderedImageDataUrl: string | null;
+  renderStatus: PipelineStatus;
   selectedWindow: WindowOpening & { roomName: string };
+  selectedLighting: string;
+  selectedMaterial: string;
+  uploadedImageDataUrl: string | null;
+  onApplyToAll: () => void;
   onChange: (configuration: BlindConfiguration) => void;
-  onPreview: () => void;
+  onCheckout: () => void;
+  onRender: () => void;
 }) {
   const selectedProduct = productTypes.find((product) => product.id === configuration.productTypeId)!;
   const availableMaterials = materials.filter((material) => material.productTypeId === configuration.productTypeId);
   const availableColors = colorOptions.filter((color) => color.materialId === configuration.materialId);
   const selectedColor = colorOptions.find((color) => color.id === configuration.colorOptionId) ?? availableColors[0];
+  const isRendering = renderStatus === "loading";
+  const stageImage = renderedImageDataUrl ?? uploadedImageDataUrl;
+  const hasBeforeAfter = Boolean(uploadedImageDataUrl && renderedImageDataUrl);
+  const [comparisonPosition, setComparisonPosition] = useState(62);
+  const [applyMessage, setApplyMessage] = useState("");
   const patchConfiguration = (patch: Partial<BlindConfiguration>) => onChange({ ...configuration, ...patch });
+  const applyCurrentConfigurationToAll = () => {
+    onApplyToAll();
+    setApplyMessage("Configuratie toegepast op alle ramen met bekende afmetingen.");
+  };
 
   return (
     <section className="configurator-shell">
       <div className="config-preview">
         <StepIndicator current="Configuratie" />
-        <VisualizationCanvas color={selectedColor?.hex ?? "#C59B62"} label={selectedProduct.name} />
+        <div className="preview-stage embedded-preview">
+          {hasBeforeAfter ? (
+            <div
+              className="real-render-stage before-after-stage"
+              style={{ ["--compare-position" as string]: `${comparisonPosition}%` }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="compare-image before" src={uploadedImageDataUrl!} alt="Originele raamfoto voor vergelijking" />
+              <div className="compare-after">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="compare-image after" src={renderedImageDataUrl!} alt="AI visualisatie na configuratie" />
+              </div>
+              <i className="compare-divider" aria-hidden="true" />
+              <span>Voor / na vergelijking</span>
+            </div>
+          ) : stageImage ? (
+            <div className="real-render-stage">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={stageImage} alt={renderedImageDataUrl ? "Gegenereerde raamdecoratie visualisatie" : "Originele raamfoto"} />
+              <span>{renderedImageDataUrl ? "AI render" : "Originele foto"}</span>
+            </div>
+          ) : (
+            <VisualizationCanvas color={selectedColor?.hex ?? "#C59B62"} label={selectedProduct.name} />
+          )}
+        </div>
         <div className="preview-meta">
           <span>{selectedWindow.roomName}</span>
           <strong>{selectedWindow.name}</strong>
           <span>{selectedWindow.measurement ? `${selectedWindow.measurement.widthMm} x ${selectedWindow.measurement.heightMm} mm` : "Maat ontbreekt"}</span>
+        </div>
+        <div className="preview-toolbar embedded-toolbar">
+          <span className="eyebrow">Visualisatie-preview</span>
+          <h2>Controleer je keuze op dezelfde raamfoto.</h2>
+          <p>Render de gekozen raamdecoratie realistisch en vergelijk direct voor en na, zonder de configurator te verlaten.</p>
+          <button className="primary-button wide" disabled={isRendering || !uploadedImageDataUrl} onClick={onRender}>
+            {isRendering ? "Visualisatie wordt gemaakt..." : renderedImageDataUrl ? "Visualisatie opnieuw maken" : "Realistische visualisatie maken"}
+            <Sparkles size={18} />
+          </button>
+          {renderStatus === "error" && <div className="pipeline-notice error">{renderError}</div>}
+          {renderStatus === "success" && <div className="pipeline-notice success">Visualisatie is klaar.</div>}
+          {!uploadedImageDataUrl && <div className="pipeline-notice muted">Upload eerst een raamfoto bij Invoer.</div>}
+          <div className="before-after">
+            <span>Voor</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={comparisonPosition}
+              disabled={!hasBeforeAfter}
+              aria-label="Voor na slider"
+              onChange={(event) => setComparisonPosition(Number(event.target.value))}
+            />
+            <span>Na</span>
+          </div>
+          <div className="summary-list">
+            <span>Materiaal</span><strong>{selectedMaterial}</strong>
+            <span>Belichting</span><strong>{selectedLighting}</strong>
+            <span>Bediening</span><strong>{configuration.controlSide === "left" ? "Links" : "Rechts"}</strong>
+          </div>
+          {applyMessage && <div className="pipeline-notice success">{applyMessage}</div>}
+          <button className="secondary-button wide" onClick={applyCurrentConfigurationToAll}>Toepassen op alle ramen</button>
+          <button className="primary-button wide" onClick={onCheckout}>Naar winkelwagen<ShoppingBag size={18} /></button>
         </div>
       </div>
       <aside className="configuration-panel">
@@ -1651,7 +1725,6 @@ function ConfiguratorView({
             </button>
           ))}
         </SelectorGroup>
-        <button className="primary-button wide" onClick={onPreview}>Preview bekijken<Eye size={18} /></button>
       </aside>
     </section>
   );
@@ -1676,109 +1749,6 @@ function VisualizationCanvas({ color, label }: { color: string; label: string })
       </div>
       <span className="canvas-label">{label}</span>
     </div>
-  );
-}
-
-function PreviewView({
-  configuration,
-  selectedWindow,
-  selectedColor,
-  selectedMaterial,
-  selectedLighting,
-  uploadedImageDataUrl,
-  renderedImageDataUrl,
-  renderStatus,
-  renderError,
-  onApplyToAll,
-  onRender,
-  onCheckout,
-}: {
-  configuration: BlindConfiguration;
-  selectedWindow: WindowOpening & { roomName: string };
-  selectedColor: string;
-  selectedMaterial: string;
-  selectedLighting: string;
-  uploadedImageDataUrl: string | null;
-  renderedImageDataUrl: string | null;
-  renderStatus: PipelineStatus;
-  renderError: string;
-  onApplyToAll: () => void;
-  onRender: () => void;
-  onCheckout: () => void;
-}) {
-  const isRendering = renderStatus === "loading";
-  const stageImage = renderedImageDataUrl ?? uploadedImageDataUrl;
-  const hasBeforeAfter = Boolean(uploadedImageDataUrl && renderedImageDataUrl);
-  const [comparisonPosition, setComparisonPosition] = useState(62);
-  const [applyMessage, setApplyMessage] = useState("");
-
-  const applyCurrentConfigurationToAll = () => {
-    onApplyToAll();
-    setApplyMessage("Configuratie toegepast op alle ramen met bekende afmetingen.");
-  };
-
-  return (
-    <section className="preview-shell">
-      <div className="preview-stage">
-        <StepIndicator current="Preview" />
-        {hasBeforeAfter ? (
-          <div
-            className="real-render-stage before-after-stage"
-            style={{ ["--compare-position" as string]: `${comparisonPosition}%` }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="compare-image before" src={uploadedImageDataUrl!} alt="Originele raamfoto voor vergelijking" />
-            <div className="compare-after">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="compare-image after" src={renderedImageDataUrl!} alt="AI visualisatie na configuratie" />
-            </div>
-            <i className="compare-divider" aria-hidden="true" />
-            <span>Voor / na vergelijking</span>
-          </div>
-        ) : stageImage ? (
-          <div className="real-render-stage">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={stageImage} alt={renderedImageDataUrl ? "Gegenereerde raamdecoratie visualisatie" : "Originele raamfoto"} />
-            <span>{renderedImageDataUrl ? "AI render" : "Originele foto"}</span>
-          </div>
-        ) : (
-          <VisualizationCanvas color={selectedColor} label={`${selectedMaterial} - ${selectedLighting}`} />
-        )}
-      </div>
-      <aside className="preview-toolbar">
-        <span className="eyebrow">Visualisatie-preview</span>
-        <h1>{selectedWindow.name}</h1>
-        <p>Genereer een realistische visualisatie op basis van je raamfoto, configuratie, montage en lichtsituatie.</p>
-        <button className="primary-button wide" disabled={isRendering || !uploadedImageDataUrl} onClick={onRender}>
-          {isRendering ? "Visualisatie wordt gemaakt..." : renderedImageDataUrl ? "Visualisatie opnieuw maken" : "Realistische visualisatie maken"}
-          <Sparkles size={18} />
-        </button>
-        {renderStatus === "error" && <div className="pipeline-notice error">{renderError}</div>}
-        {renderStatus === "success" && <div className="pipeline-notice success">Visualisatie is klaar.</div>}
-        {!uploadedImageDataUrl && <div className="pipeline-notice muted">Upload eerst een raamfoto bij Invoer.</div>}
-        <div className="before-after">
-          <span>Voor</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={comparisonPosition}
-            disabled={!hasBeforeAfter}
-            aria-label="Voor na slider"
-            onChange={(event) => setComparisonPosition(Number(event.target.value))}
-          />
-          <span>Na</span>
-        </div>
-        <div className="summary-list">
-          <span>Materiaal</span><strong>{selectedMaterial}</strong>
-          <span>Belichting</span><strong>{selectedLighting}</strong>
-          <span>Bediening</span><strong>{configuration.controlSide === "left" ? "Links" : "Rechts"}</strong>
-        </div>
-        {applyMessage && <div className="pipeline-notice success">{applyMessage}</div>}
-        <button className="secondary-button wide" onClick={applyCurrentConfigurationToAll}>Toepassen op alle ramen</button>
-        <button className="primary-button wide" onClick={onCheckout}>Naar winkelwagen<ShoppingBag size={18} /></button>
-      </aside>
-    </section>
   );
 }
 
