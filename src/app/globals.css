@@ -1099,6 +1099,42 @@ textarea {
   gap: 0.5rem;
 }
 
+.catalog-chip-grid,
+.catalog-product-grid {
+  display: grid !important;
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.55rem;
+}
+
+.catalog-product {
+  display: grid;
+  min-height: 6.6rem;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.75rem;
+  color: var(--ink);
+  text-align: left;
+}
+
+.catalog-product.active {
+  border-color: var(--orange);
+  box-shadow: inset 0 0 0 1px var(--orange);
+}
+
+.catalog-product span {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.catalog-product small {
+  color: var(--ink-soft);
+}
+
 .selector,
 .swatch {
   min-height: 2.35rem;

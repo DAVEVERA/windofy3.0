@@ -87,6 +87,7 @@ export interface WindowPhoto {
 
 export interface BlindConfiguration {
   id: string;
+  catalogProductId?: string;
   productTypeId: ProductTypeId;
   materialId: MaterialId;
   colorOptionId: string;

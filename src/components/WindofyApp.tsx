@@ -27,6 +27,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { catalogGroups, catalogProducts } from "@/data/catalog";
 import {
   builderBlocks,
   colorOptions,
@@ -96,6 +97,8 @@ type CheckoutCartItem = {
   price: number;
   catalogProductId?: string;
   catalogProductName?: string;
+  catalogColorName?: string;
+  catalogColorHex?: string;
   areaSquareMeters?: number;
   measurement?: Measurement;
   configuration?: BlindConfiguration;
@@ -330,6 +333,8 @@ export function WindofyApp() {
         price: pricedWindow?.totalCents ?? 0,
         catalogProductId: pricedWindow?.product.id,
         catalogProductName: pricedWindow?.product.name,
+        catalogColorName: pricedWindow?.product.colorName,
+        catalogColorHex: pricedWindow?.product.colorHex,
         areaSquareMeters: pricedWindow?.areaSquareMeters,
         measurement: window.measurement,
         configuration: itemConfiguration,
@@ -520,7 +525,7 @@ export function WindofyApp() {
         return current;
       }
 
-      const colorName = selectedColor?.name ?? catalogProductName.split(" ").at(-1) ?? "Gekozen kleur";
+      const colorName = item.catalogColorName ?? selectedColor?.name ?? catalogProductName.split(" ").at(-1) ?? "Gekozen kleur";
       return [
         ...current,
         {
@@ -1538,6 +1543,14 @@ function ConfiguratorView({
   const availableMaterials = materials.filter((material) => material.productTypeId === configuration.productTypeId);
   const availableColors = colorOptions.filter((color) => color.materialId === configuration.materialId);
   const selectedColor = colorOptions.find((color) => color.id === configuration.colorOptionId) ?? availableColors[0];
+  const activeCatalogProduct =
+    catalogProducts.find((product) => product.id === configuration.catalogProductId) ??
+    catalogProducts.find((product) => product.groupId === configuration.productTypeId) ??
+    catalogProducts[0];
+  const activeCatalogGroupId = activeCatalogProduct.groupId;
+  const visibleCatalogProducts = catalogProducts
+    .filter((product) => product.groupId === activeCatalogGroupId)
+    .slice(0, 15);
   const isRendering = renderStatus === "loading";
   const stageImage = renderedImageDataUrl ?? uploadedImageDataUrl;
   const hasBeforeAfter = Boolean(uploadedImageDataUrl && renderedImageDataUrl);
@@ -1618,7 +1631,44 @@ function ConfiguratorView({
         </div>
       </div>
       <aside className="configuration-panel">
-        <h1>Jaloezie configureren</h1>
+        <h1>Raamdecoratie configureren</h1>
+        <SelectorGroup label="Webshop catalogus">
+          <div className="catalog-chip-grid">
+            {catalogGroups.map((group) => (
+              <button
+                key={group.id}
+                className={activeCatalogGroupId === group.id ? "selector active" : "selector"}
+                onClick={() => {
+                  const nextProduct = catalogProducts.find((product) => product.groupId === group.id);
+                  if (!nextProduct) {
+                    return;
+                  }
+                  patchConfiguration({ catalogProductId: nextProduct.id });
+                }}
+              >
+                {group.name}
+              </button>
+            ))}
+          </div>
+        </SelectorGroup>
+        <SelectorGroup label="Productkeuze">
+          <div className="catalog-product-grid">
+            {visibleCatalogProducts.map((product) => (
+              <button
+                key={product.id}
+                className={configuration.catalogProductId === product.id ? "catalog-product active" : "catalog-product"}
+                onClick={() => patchConfiguration({ catalogProductId: product.id })}
+              >
+                <span style={{ backgroundColor: product.colorHex }} />
+                <strong>{product.name}</strong>
+                <small>{formatPrice(product.basePriceCents)} + m2 prijs</small>
+              </button>
+            ))}
+          </div>
+        </SelectorGroup>
+        <div className="pipeline-notice muted">
+          Webshopkeuze: {activeCatalogProduct.name}. De technische render gebruikt nu nog de jaloezie-instellingen hieronder totdat alle productvisualisaties zijn uitgebreid.
+        </div>
         <SelectorGroup label="Producttype">
           {productTypes.map((product) => (
             <button
@@ -1924,6 +1974,8 @@ function CheckoutView({
           priceCents: item.price,
           catalogProductId: item.catalogProductId,
           catalogProductName: item.catalogProductName,
+          catalogColorName: item.catalogColorName,
+          catalogColorHex: item.catalogColorHex,
           areaSquareMeters: item.areaSquareMeters,
           measurement: item.measurement,
           configuration: item.configuration,
@@ -1979,6 +2031,8 @@ function CheckoutView({
             price: item.price,
             catalogProductId: item.catalogProductId,
             catalogProductName: item.catalogProductName,
+            catalogColorName: item.catalogColorName,
+            catalogColorHex: item.catalogColorHex,
             areaSquareMeters: item.areaSquareMeters,
             measurement: item.measurement,
             configuration: item.configuration,

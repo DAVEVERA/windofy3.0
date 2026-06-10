@@ -9,6 +9,7 @@ export type WindowPrice = {
 
 export function priceWindowConfiguration(configuration: BlindConfiguration, measurement: Measurement): WindowPrice {
   const product =
+    catalogProducts.find((item) => item.id === configuration.catalogProductId) ??
     catalogProducts.find(
       (item) => item.groupId === configuration.productTypeId && item.id.includes(configuration.colorOptionId),
     ) ??
