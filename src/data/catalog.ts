@@ -228,6 +228,18 @@ const productSpecs: ProductSpec[] = [
 ];
 
 const readyProductImages: Record<string, { url: string; reviewNotes: string }> = {
+  "aluminium-blinds-07": {
+    url: "/catalog/products/aluminium-blinds-mistgrijs.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic grey aluminium slats, white frame, no text, no logo, no watermark.",
+  },
+  "roller-blinds-02": {
+    url: "/catalog/products/roller-blinds-linnen.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic linen roller blind fabric, correct top tube, no text, no logo, no watermark.",
+  },
+  "voile-curtains-01": {
+    url: "/catalog/products/voile-curtains-krijtwit.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic translucent voile curtains, rail, folds, no text, no logo, no watermark.",
+  },
   "wood-blinds-03": {
     url: "/catalog/products/wood-blinds-zand.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic wooden slats, white frame, no text, no logo, no watermark.",

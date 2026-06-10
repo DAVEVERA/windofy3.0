@@ -5995,13 +5995,13 @@ insert into public.catalog_product_assets (
   ),
 (
     'aluminium-blinds-07',
-    'pending-generation',
+    'ready',
     'product-photo',
-    null,
+    '/catalog/products/aluminium-blinds-mistgrijs.png',
     'Aluminium Mistgrijs als waarheidsgetrouwe raamdecoratie productvisual.',
     'Realistische studio productfoto voor een Nederlandse raamdecoratie webshop. Product: Aluminium Mistgrijs. Categorie: Aluminium jaloezieen. Materiaal/familie: Aluminium. Kleur: Mistgrijs (#b8bbb4). Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking. Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.',
     'https://www.raamdecoratie.com/',
-    'Pending generation and visual QA.'
+    'AI-generated product mockup visually inspected: realistic grey aluminium slats, white frame, no text, no logo, no watermark.'
   ),
 (
     'aluminium-blinds-08',
@@ -6095,13 +6095,13 @@ insert into public.catalog_product_assets (
   ),
 (
     'roller-blinds-02',
-    'pending-generation',
+    'ready',
     'product-photo',
-    null,
+    '/catalog/products/roller-blinds-linnen.png',
     'Rolgordijn Linnen als waarheidsgetrouwe raamdecoratie productvisual.',
     'Realistische studio productfoto voor een Nederlandse raamdecoratie webshop. Product: Rolgordijn Linnen. Categorie: Rolgordijnen. Materiaal/familie: Textiel. Kleur: Linnen (#d9d0bf). Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking. Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.',
     'https://www.raamdecoratie.com/',
-    'Pending generation and visual QA.'
+    'AI-generated product mockup visually inspected: realistic linen roller blind fabric, correct top tube, no text, no logo, no watermark.'
   ),
 (
     'roller-blinds-03',
@@ -7885,13 +7885,13 @@ insert into public.catalog_product_assets (
   ),
 (
     'voile-curtains-01',
-    'pending-generation',
+    'ready',
     'product-photo',
-    null,
+    '/catalog/products/voile-curtains-krijtwit.png',
     'Vitrage Krijtwit als waarheidsgetrouwe raamdecoratie productvisual.',
     'Realistische studio productfoto voor een Nederlandse raamdecoratie webshop. Product: Vitrage Krijtwit. Categorie: Vitrage. Materiaal/familie: Transparante voile. Kleur: Krijtwit (#f2eee6). Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking. Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.',
     'https://www.luxaflex.nl/',
-    'Pending generation and visual QA.'
+    'AI-generated product mockup visually inspected: realistic translucent voile curtains, rail, folds, no text, no logo, no watermark.'
   ),
 (
     'voile-curtains-02',

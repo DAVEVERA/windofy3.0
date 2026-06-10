@@ -53,7 +53,7 @@ npm run catalog:seed
 npm run catalog:verify
 ```
 
-`catalog:verify` must report 240 products and 15 products for every concrete group/subgroup before the seed is applied to Supabase.
+`catalog:verify` must report 240 products and 15 products for every concrete group/subgroup before the seed is applied to Supabase. It also checks every `ready` image URL against a real file under `public/`, validates basic image format, validates non-trivial file size, and requires visual QA review notes.
 
 Supabase CLI is not installed in this workspace, so the migration file was created manually instead of via `supabase migration new`.
 
