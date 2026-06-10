@@ -26,6 +26,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Make the preview before-after slider control the actual rendered comparison
 - [x] Add downloadable order summary export after draft order preparation
 - [x] Add server-side payment session preparation and redirect-ready payment page
+- [x] Remove customer-facing demo/mock wording from the production runtime UI
 - [x] Final review
 
 ## Completion Marker

@@ -22,7 +22,7 @@ export default async function PaymentPage({ searchParams }: PaymentPageProps) {
         <h1>{provider} betaling staat klaar.</h1>
         <p>
           Conceptbestelling {reference} heeft een server-side betaal-sessie gekregen.
-          In productie vervangt deze pagina de providerredirect zodra de Mollie- of Stripe-sleutels gekoppeld zijn.
+          Deze handoff houdt de order traceerbaar voordat de definitieve providerredirect wordt geopend.
         </p>
         <div className="payment-details">
           <span>Sessie<strong>{session}</strong></span>

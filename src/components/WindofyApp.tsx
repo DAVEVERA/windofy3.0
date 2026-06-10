@@ -717,7 +717,7 @@ function HomeView({ onStart, onExplain }: { onStart: () => void; onExplain: () =
               Start live inmeten
               <ArrowRight size={18} />
             </button>
-            <button className="secondary-button" onClick={onExplain}>Open demo-flow</button>
+            <button className="secondary-button" onClick={onExplain}>Foto of maten invoeren</button>
           </div>
           <div className="hero-status-grid" aria-label="Productiestatus">
             {operationalStats.map(([label, value]) => (
@@ -750,7 +750,7 @@ function HomeView({ onStart, onExplain }: { onStart: () => void; onExplain: () =
 
 function Hero3DWindow() {
   return (
-    <div className="hero-visual" aria-label="3D raamvisualisatie mockup">
+    <div className="hero-visual" aria-label="3D raamvisualisatie">
       <div className="room-plane">
         <div className="window-frame">
           <div className="blind-stack">
@@ -1585,7 +1585,7 @@ function SelectorGroup({ label, children }: { label: string; children: React.Rea
 function VisualizationCanvas({ color, label }: { color: string; label: string }) {
   return (
     <div className="visualization-canvas" style={{ ["--blind-color" as string]: color }}>
-      <div className="canvas-toolbar"><span>WebGL preview</span><span>Mask 91%</span></div>
+      <div className="canvas-toolbar"><span>Configuratie-preview</span><span>Live formaat</span></div>
       <div className="render-window">
         <div className="render-glass" />
         <div className="render-blinds">{Array.from({ length: 13 }).map((_, index) => <span key={index} />)}</div>
@@ -1970,11 +1970,11 @@ function CheckoutView({
         </div>
       </aside>
       <section className="admin-ready">
-        <h2>Admin-ready blocks</h2>
+        <h2>Beschikbare functies</h2>
         <div>
           {builderBlocks.map((block) => {
             const entitlement = featureEntitlements.find((item) => item.builderBlockId === block.id);
-            return <span key={block.id}>{block.name}<strong>{entitlement?.enabled ? "Aan" : "Uit"}</strong></span>;
+            return <span key={block.id}>{block.name}<strong>{entitlement?.enabled ? "Actief" : "Niet actief"}</strong></span>;
           })}
         </div>
       </section>
