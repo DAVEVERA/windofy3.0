@@ -110,6 +110,7 @@ Run the Python AI service and Next.js app as two separate services.
 - Web app talks to the AI service through `AI_SERVICE_URL`.
 - Web readiness endpoint: `/api/health`
 - AI readiness endpoint: `/health`
+- Checkout uses `/api/orders/draft` for server-side order validation and `/api/orders/payment-session` for redirect-ready payment session preparation. Without provider credentials it redirects to `/betaling` as an internal handoff page.
 - Optional Supabase Storage is server-side only. Configure `SUPABASE_URL`, `SUPABASE_KEY`, and `SUPABASE_BUCKET`; never expose `SUPABASE_KEY` to the browser.
 - Keep `models/`, `.venv/`, `.env`, and uploaded runtime data out of git.
 

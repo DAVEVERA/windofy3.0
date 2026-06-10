@@ -9,6 +9,7 @@ import {
   CircleAlert,
   ClipboardCheck,
   CreditCard,
+  Download,
   Eye,
   Home,
   Layers3,
@@ -96,6 +97,17 @@ type DraftOrderResponse = {
   ok?: boolean;
   error?: string;
   order?: PreparedDraftOrder;
+};
+type PaymentSessionResponse = {
+  ok?: boolean;
+  error?: string;
+  session?: {
+    id: string;
+    status: "ready";
+    provider: "mollie" | "stripe";
+    redirectUrl: string;
+    expiresAt: string;
+  };
 };
 type PreparedDraftOrder = {
   id: string;
@@ -1713,6 +1725,9 @@ function CheckoutView({
 }) {
   const [checkoutError, setCheckoutError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentSessionError, setPaymentSessionError] = useState("");
+  const [paymentSessionUrl, setPaymentSessionUrl] = useState("");
+  const [isPreparingPayment, setIsPreparingPayment] = useState(false);
   const missingMeasurements = cartItems.filter((item) => !item.measurement);
   const preparedReference = draftOrder?.reference ?? orderReference;
   const updateCheckoutField = (field: keyof CheckoutDetails, value: string) => {
@@ -1728,6 +1743,37 @@ function CheckoutView({
       onOrderReferenceChange("");
       onDraftOrderChange(null);
     }
+  };
+
+  const downloadOrderSummary = () => {
+    if (!draftOrder) {
+      return;
+    }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      order: draftOrder,
+      customer: checkoutDetails,
+      cart: {
+        totalCents: cartTotal,
+        currency: "EUR",
+        items: cartItems.map((item) => ({
+          id: item.id,
+          roomName: item.roomName,
+          windowName: item.windowName,
+          priceCents: item.price,
+          measurement: item.measurement,
+          configuration: item.configuration,
+        })),
+      },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${draftOrder.reference}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleCheckoutSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1783,10 +1829,48 @@ function CheckoutView({
       onCheckoutDetailsChange(normalizedDetails);
       onDraftOrderChange(payload.order);
       onOrderReferenceChange(payload.order.reference);
+      setPaymentSessionUrl("");
+      setPaymentSessionError("");
     } catch {
       setCheckoutError("Bestelling kon niet worden voorbereid. Controleer de verbinding en probeer opnieuw.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const preparePaymentSession = async () => {
+    if (!draftOrder) {
+      setPaymentSessionError("Maak eerst een conceptbestelling aan voordat je de betaalpagina opent.");
+      return;
+    }
+
+    setIsPreparingPayment(true);
+    setPaymentSessionError("");
+
+    try {
+      const response = await fetch("/api/orders/payment-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: draftOrder.id,
+          reference: draftOrder.reference,
+          provider: draftOrder.paymentProvider,
+          totalCents: draftOrder.totalCents,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as PaymentSessionResponse | null;
+
+      if (!response.ok || !payload?.ok || !payload.session?.redirectUrl) {
+        setPaymentSessionError(payload?.error ?? "Betaalsessie kon niet worden voorbereid.");
+        return;
+      }
+
+      setPaymentSessionUrl(payload.session.redirectUrl);
+      window.location.assign(payload.session.redirectUrl);
+    } catch {
+      setPaymentSessionError("Betaalsessie kon niet worden voorbereid. Controleer de verbinding en probeer opnieuw.");
+    } finally {
+      setIsPreparingPayment(false);
     }
   };
 
@@ -1797,7 +1881,7 @@ function CheckoutView({
         <div className="section-heading compact">
           <span className="eyebrow">Checkout-overzicht</span>
           <h1>Controleer alles voor betaling.</h1>
-          <p>Alle eerder opgeslagen maten, configuraties en previews gaan automatisch mee. Mollie of Stripe kan later achter deze providerlaag.</p>
+          <p>Alle eerder opgeslagen maten, configuraties en previews gaan automatisch mee naar de server-side betaalvoorbereiding.</p>
         </div>
         <div className="checkout-steps">
           {checkoutSteps.map(({ title, Icon }) => (
@@ -1848,12 +1932,20 @@ function CheckoutView({
               )}
             </div>
           )}
+          {paymentSessionError && <div className="pipeline-notice error">{paymentSessionError}</div>}
+          {paymentSessionUrl && <div className="pipeline-notice success">Betaalsessie klaar. Je wordt doorgestuurd.</div>}
           <div className="checkout-actions">
             <button className="secondary-button" type="button" onClick={onClearDraft}>Nieuwe configuratie</button>
+            <button className="secondary-button" type="button" disabled={!draftOrder} onClick={downloadOrderSummary}>
+              Order downloaden<Download size={18} />
+            </button>
             <button className="primary-button" type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Order wordt voorbereid..." : "Betaling voorbereiden"}<CreditCard size={18} />
             </button>
           </div>
+          <button className="primary-button wide" type="button" disabled={!draftOrder || isPreparingPayment} onClick={preparePaymentSession}>
+            {isPreparingPayment ? "Betaalsessie openen..." : "Betaalpagina openen"}<ArrowRight size={18} />
+          </button>
         </form>
       </div>
       <aside className="cart-summary">

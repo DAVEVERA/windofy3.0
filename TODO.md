@@ -24,6 +24,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Make room rename controls functional and persistent across checkout
 - [x] Make manual measurement input save real measurements and unlock the flow without requiring a photo
 - [x] Make the preview before-after slider control the actual rendered comparison
+- [x] Add server-side payment session preparation and redirect-ready payment page
 - [x] Final review
 
 ## Completion Marker
