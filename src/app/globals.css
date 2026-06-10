@@ -383,6 +383,7 @@ p {
 .room-card,
 .manual-form,
 .vision-panel,
+.measurement-editor,
 .configuration-panel,
 .preview-toolbar,
 .cart-summary,
@@ -764,6 +765,7 @@ p {
 }
 
 .manual-form,
+.measurement-editor,
 .configuration-panel,
 .preview-toolbar,
 .cart-summary {
@@ -859,6 +861,16 @@ textarea {
   display: grid;
   gap: 0.65rem;
   padding: 1rem;
+}
+
+.measurement-editor {
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.measurement-editor h2 {
+  font-size: 1.25rem;
 }
 
 .window-card {
