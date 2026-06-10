@@ -63,7 +63,15 @@ type DraftState = {
   renderedImageDataUrl?: string | null;
   paymentMethod?: "ideal" | "card";
   orderReference?: string;
+  checkoutDetails?: CheckoutDetails;
   measurementOverrides?: Record<string, Measurement>;
+};
+type CheckoutDetails = {
+  name: string;
+  email: string;
+  postalCode: string;
+  houseNumber: string;
+  address: string;
 };
 type AnalysisResult = {
   qualityFailed?: boolean;
@@ -125,6 +133,13 @@ const statusLabels: Record<WindowStatus, string> = {
 
 const DUTCH_LOCALE = "nl-NL";
 const DRAFT_STORAGE_KEY = "windofy.configurator.draft.v1";
+const emptyCheckoutDetails: CheckoutDetails = {
+  name: "",
+  email: "",
+  postalCode: "",
+  houseNumber: "",
+  address: "",
+};
 
 const formatPrice = (cents: number) =>
   new Intl.NumberFormat(DUTCH_LOCALE, { style: "currency", currency: "EUR" }).format(cents / 100);
@@ -187,6 +202,7 @@ export function WindofyApp() {
   const [renderError, setRenderError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
   const [orderReference, setOrderReference] = useState("");
+  const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(emptyCheckoutDetails);
   const [measurementOverrides, setMeasurementOverrides] = useState<Record<string, Measurement>>({});
   const [draftRestored, setDraftRestored] = useState(false);
 
@@ -265,6 +281,9 @@ export function WindofyApp() {
       if (draft.orderReference) {
         setOrderReference(draft.orderReference);
       }
+      if (draft.checkoutDetails) {
+        setCheckoutDetails({ ...emptyCheckoutDetails, ...draft.checkoutDetails });
+      }
       if (draft.measurementOverrides) {
         setMeasurementOverrides(draft.measurementOverrides);
       }
@@ -289,12 +308,14 @@ export function WindofyApp() {
       renderedImageDataUrl,
       paymentMethod,
       orderReference,
+      checkoutDetails,
       measurementOverrides,
     };
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
     activeStep,
     analysisResult,
+    checkoutDetails,
     configuration,
     draftRestored,
     orderReference,
@@ -321,6 +342,7 @@ export function WindofyApp() {
     setRenderError("");
     setPaymentMethod("ideal");
     setOrderReference("");
+    setCheckoutDetails(emptyCheckoutDetails);
     setMeasurementOverrides({});
   };
 
@@ -498,9 +520,11 @@ export function WindofyApp() {
           <CheckoutView
             cartItems={cartItems}
             cartTotal={cartTotal}
+            checkoutDetails={checkoutDetails}
             orderReference={orderReference}
             paymentMethod={paymentMethod}
             onClearDraft={clearDraft}
+            onCheckoutDetailsChange={setCheckoutDetails}
             onOrderReferenceChange={setOrderReference}
             onPaymentMethodChange={setPaymentMethod}
           />
@@ -1443,9 +1467,11 @@ function PreviewView({
 function CheckoutView({
   cartItems,
   cartTotal,
+  checkoutDetails,
   orderReference,
   paymentMethod,
   onClearDraft,
+  onCheckoutDetailsChange,
   onOrderReferenceChange,
   onPaymentMethodChange,
 }: {
@@ -1457,22 +1483,36 @@ function CheckoutView({
     measurement?: { widthMm: number; heightMm: number };
   }>;
   cartTotal: number;
+  checkoutDetails: CheckoutDetails;
   orderReference: string;
   paymentMethod: "ideal" | "card";
   onClearDraft: () => void;
+  onCheckoutDetailsChange: (value: CheckoutDetails) => void;
   onOrderReferenceChange: (value: string) => void;
   onPaymentMethodChange: (value: "ideal" | "card") => void;
 }) {
   const [checkoutError, setCheckoutError] = useState("");
   const missingMeasurements = cartItems.filter((item) => !item.measurement);
+  const updateCheckoutField = (field: keyof CheckoutDetails, value: string) => {
+    onCheckoutDetailsChange({ ...checkoutDetails, [field]: value });
+    if (orderReference) {
+      onOrderReferenceChange("");
+    }
+  };
 
   const handleCheckoutSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCheckoutError("");
 
-    const formData = new FormData(event.currentTarget);
-    const requiredFields = ["name", "email", "postalCode", "houseNumber"];
-    const missingField = requiredFields.find((field) => !String(formData.get(field) || "").trim());
+    const normalizedDetails: CheckoutDetails = {
+      name: checkoutDetails.name.trim(),
+      email: checkoutDetails.email.trim(),
+      postalCode: checkoutDetails.postalCode.trim().toUpperCase(),
+      houseNumber: checkoutDetails.houseNumber.trim(),
+      address: checkoutDetails.address.trim(),
+    };
+    const requiredFields: Array<keyof CheckoutDetails> = ["name", "email", "postalCode", "houseNumber"];
+    const missingField = requiredFields.find((field) => !normalizedDetails[field]);
 
     if (missingField) {
       setCheckoutError("Vul naam, e-mail, postcode en huisnummer in om de bestelling voor te bereiden.");
@@ -1484,6 +1524,7 @@ function CheckoutView({
       return;
     }
 
+    onCheckoutDetailsChange(normalizedDetails);
     const reference = `WDF-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
     onOrderReferenceChange(reference);
   };
@@ -1505,14 +1546,14 @@ function CheckoutView({
         <form className="checkout-form" onSubmit={handleCheckoutSubmit}>
           <h2>Gegevens voor bestelling</h2>
           <div className="input-row">
-            <label>Naam<input name="name" autoComplete="name" placeholder="Voor- en achternaam" /></label>
-            <label>E-mail<input name="email" type="email" autoComplete="email" placeholder="naam@voorbeeld.nl" /></label>
+            <label>Naam<input name="name" autoComplete="name" value={checkoutDetails.name} onChange={(event) => updateCheckoutField("name", event.target.value)} placeholder="Voor- en achternaam" /></label>
+            <label>E-mail<input name="email" type="email" autoComplete="email" value={checkoutDetails.email} onChange={(event) => updateCheckoutField("email", event.target.value)} placeholder="naam@voorbeeld.nl" /></label>
           </div>
           <div className="input-row">
-            <label>Postcode<input name="postalCode" autoComplete="postal-code" placeholder="1234 AB" /></label>
-            <label>Huisnummer<input name="houseNumber" autoComplete="address-line2" placeholder="12" /></label>
+            <label>Postcode<input name="postalCode" autoComplete="postal-code" value={checkoutDetails.postalCode} onChange={(event) => updateCheckoutField("postalCode", event.target.value)} placeholder="1234 AB" /></label>
+            <label>Huisnummer<input name="houseNumber" autoComplete="address-line2" value={checkoutDetails.houseNumber} onChange={(event) => updateCheckoutField("houseNumber", event.target.value)} placeholder="12" /></label>
           </div>
-          <label>Adresregel<input name="address" autoComplete="street-address" placeholder="Straatnaam en plaats" /></label>
+          <label>Adresregel<input name="address" autoComplete="street-address" value={checkoutDetails.address} onChange={(event) => updateCheckoutField("address", event.target.value)} placeholder="Straatnaam en plaats" /></label>
           <div className="payment-methods" role="radiogroup" aria-label="Betaalmethode">
             <button
               className={paymentMethod === "ideal" ? "payment-method active" : "payment-method"}
@@ -1537,7 +1578,7 @@ function CheckoutView({
           {orderReference && (
             <div className="pipeline-notice success">
               <strong>Bestelling voorbereid</strong>
-              <span>Referentie {orderReference}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
+              <span>Referentie {orderReference}. {checkoutDetails.name} ontvangt de betaalinstructie via {checkoutDetails.email}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
             </div>
           )}
           <div className="checkout-actions">

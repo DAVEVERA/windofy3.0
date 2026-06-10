@@ -15,8 +15,9 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add crawlable site identity metadata, robots, sitemap, and conservative Organization/WebSite JSON-LD
 - [x] Audit Supabase/back-end contracts for production data ownership and security readiness
 - [x] Audit mobile purchase flow and checkout responsiveness with browser screenshots
+- [x] Persist checkout customer details and prepared order state across reloads
 - [x] Final review
 
 ## Completion Marker
 
-ALL_TASKS_COMPLETE: true
+ALL_TASKS_COMPLETE: false
