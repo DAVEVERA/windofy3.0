@@ -83,11 +83,18 @@ type AnalysisResult = {
 };
 
 const processItems: IconListItem[] = [
-  { title: "Upload", body: "Foto of live camera", Icon: Camera },
-  { title: "Detectie", body: "AI vindt raam en kozijn", Icon: Wand2 },
-  { title: "Inmeten", body: "Begeleide maatcontrole", Icon: Ruler },
-  { title: "Preview", body: "Jaloezie direct zichtbaar", Icon: Eye },
-  { title: "Bestellen", body: "Korte checkout", Icon: PackageCheck },
+  { title: "Live camera", body: "AI kijkt mee met Nederlandse spraak", Icon: Camera },
+  { title: "Raamdetectie", body: "Openingen en kozijnen apart herkend", Icon: Wand2 },
+  { title: "Meetcontrole", body: "Begeleide controle voor elk raam", Icon: Ruler },
+  { title: "AI preview", body: "Jaloezie direct in je interieur", Icon: Eye },
+  { title: "Bestellen", body: "Configuratie klaar voor checkout", Icon: PackageCheck },
+];
+
+const operationalStats = [
+  ["Live taal", "Nederlands"],
+  ["AI zicht", "Vision + mask"],
+  ["Render", "Realistische preview"],
+  ["Checkout", "Order-ready"],
 ];
 
 const checkoutSteps: IconListItem[] = [
@@ -393,16 +400,24 @@ function HomeView({ onStart, onExplain }: { onStart: () => void; onExplain: () =
         <div className="hero-copy">
           <span className="eyebrow">
             <Sparkles size={16} />
-            AI configurator voor raamdecoratie
+            Windofy live vision
           </span>
-          <h1>AI-raamdecoratie die past voordat je bestelt.</h1>
-          <p>Upload je raam, meet live met AI en visualiseer houten of aluminium jaloezieen direct in je eigen interieur.</p>
+          <h1>Meet ramen live en zie je jaloezie voordat je bestelt.</h1>
+          <p>Windofy begeleidt Nederlandse klanten met live vision, gesproken meetinstructies en een realistische AI-preview per raam.</p>
           <div className="hero-actions">
             <button className="primary-button" onClick={onStart}>
-              Start met jouw ramen
+              Start live inmeten
               <ArrowRight size={18} />
             </button>
-            <button className="secondary-button" onClick={onExplain}>Ik wil eerst zien hoe het werkt</button>
+            <button className="secondary-button" onClick={onExplain}>Open demo-flow</button>
+          </div>
+          <div className="hero-status-grid" aria-label="Productiestatus">
+            {operationalStats.map(([label, value]) => (
+              <span key={label}>
+                <small>{label}</small>
+                <strong>{value}</strong>
+              </span>
+            ))}
           </div>
         </div>
         <Hero3DWindow />
@@ -435,10 +450,10 @@ function Hero3DWindow() {
               <span key={index} style={{ transform: `translateZ(${index * 1.5}px) rotateX(-${index % 2}deg)` }} />
             ))}
           </div>
-          <div className="detection-box"><span>AI mask 92%</span></div>
+          <div className="detection-box"><span>Live mask 92%</span></div>
         </div>
-        <div className="hero-card-floating top"><Camera size={17} />Foto uploaden</div>
-        <div className="hero-card-floating bottom"><Ruler size={17} />1820 x 1460 mm</div>
+        <div className="hero-card-floating top"><Camera size={17} />Spraakcoach NL</div>
+        <div className="hero-card-floating bottom"><Ruler size={17} />4 raamopeningen</div>
       </div>
     </div>
   );
@@ -472,8 +487,8 @@ function ChoiceView({ onChooseManual, onChooseVision }: { onChooseManual: () => 
         </button>
         <button className="choice-card highlighted" onClick={onChooseVision}>
           <Wand2 size={28} />
-          <span>Help mij live inmeten</span>
-          <small>Start de Live Vision AI module voor raamherkenning en meetbegeleiding.</small>
+          <span>Meet live met AI-spraakcoach</span>
+          <small>Gebruik de camera; het visionmodel geeft Nederlandse instructies terwijl je het raam in beeld brengt.</small>
           <ChevronRight size={20} />
         </button>
       </div>
@@ -676,8 +691,8 @@ function InputView({
         <StepIndicator current="Invoer" />
         <div className="section-heading compact">
           <span className="eyebrow">Live Vision AI</span>
-          <h1>Upload een raamfoto en laat AI de ruimte analyseren.</h1>
-          <p>De foto wordt server-side geanalyseerd op raam, interieurstijl, kleur, licht en montageadvies.</p>
+          <h1>Meet live met camera, visionmodel en Nederlandse spraak.</h1>
+          <p>Start de camera, laat de AI-spraakcoach meekijken en analyseer een live frame zodra het raam stabiel in beeld staat.</p>
         </div>
         <div className="vision-panel">
           {liveStatus === "active" && (
@@ -787,7 +802,7 @@ function InputView({
           <label>Breedte<input defaultValue="1820 mm" /></label>
           <label>Hoogte<input defaultValue="1460 mm" /></label>
         </div>
-        <label>Notitie<textarea defaultValue="Binnen het kozijn monteren, vensterbank vrijhouden." /></label>
+        <label>Notitie<textarea defaultValue="Binnen het kozijn monteren, vensterbank vrijhouden. Live meting kan deze waarden controleren." /></label>
       </div>
     </section>
   );
