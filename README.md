@@ -98,6 +98,8 @@ Live measuring uses the browser camera through `getUserMedia`.
 
 - `Analyseer live frame` captures a still frame from the live video feed and sends it to `/api/ai/analyze`, so the same server-side vision model and segmentation pipeline drive both uploaded photos and live camera measurements.
 - `AI spraakcoach starten` captures live frames on an interval and sends them to `/api/ai/live-guide`. The server-side vision model is instructed to return one short Dutch (`nl-NL`) measuring instruction, and the browser speaks it through `speechSynthesis` with a Dutch voice when available.
+- The live UI keeps the latest spoken instruction available for replay and shows the returned language, confidence, and status issue so the operator can see why the AI coach is asking for another camera position.
+- The frontend sends the current live measuring stage (`positioning`, `stability-check`, or `measurement-confirmation`) with each guidance request, so the AI coach can move from framing instructions to final confirmation.
 
 ## Production shape
 
