@@ -20,6 +20,7 @@ import {
   Settings2,
   ShoppingBag,
   Sparkles,
+  UserRound,
   Volume2,
   Wand2,
 } from "lucide-react";
@@ -40,7 +41,7 @@ import {
 import type { BlindConfiguration, Measurement, WindowOpening, WindowStatus } from "@/domain/types";
 import { priceWindowConfiguration } from "@/lib/pricing";
 
-const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Preview", "Checkout"] as const;
+const flowSteps = ["Home", "Keuze", "Invoer", "Ramencheck", "Configuratie", "Preview", "Checkout", "Account"] as const;
 type FlowStep = (typeof flowSteps)[number];
 type IconListItem = {
   title: string;
@@ -78,6 +79,7 @@ type DraftState = {
   checkoutDetails?: CheckoutDetails;
   measurementOverrides?: Record<string, Measurement>;
   roomNameOverrides?: Record<string, string>;
+  sampleRequests?: SampleRequest[];
 };
 type CheckoutDetails = {
   name: string;
@@ -88,6 +90,7 @@ type CheckoutDetails = {
 };
 type CheckoutCartItem = {
   id: string;
+  windowId: string;
   roomName: string;
   windowName: string;
   price: number;
@@ -122,6 +125,16 @@ type PreparedDraftOrder = {
   totalCents: number;
   itemCount: number;
   createdAt: string;
+};
+type SampleRequest = {
+  id: string;
+  windowId: string;
+  windowName: string;
+  roomName: string;
+  catalogProductId: string;
+  catalogProductName: string;
+  colorName: string;
+  requestedAt: string;
 };
 type AnalysisResult = {
   qualityFailed?: boolean;
@@ -276,6 +289,7 @@ export function WindofyApp() {
   const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(emptyCheckoutDetails);
   const [measurementOverrides, setMeasurementOverrides] = useState<Record<string, Measurement>>({});
   const [roomNameOverrides, setRoomNameOverrides] = useState<Record<string, string>>({});
+  const [sampleRequests, setSampleRequests] = useState<SampleRequest[]>([]);
   const [draftRestored, setDraftRestored] = useState(false);
 
   const allWindows = useMemo(
@@ -310,6 +324,7 @@ export function WindofyApp() {
         : null;
       return {
         id: `cart-${window.id}`,
+        windowId: window.id,
         roomName: window.roomName,
         windowName: window.name,
         price: pricedWindow?.totalCents ?? 0,
@@ -380,6 +395,9 @@ export function WindofyApp() {
       if (draft.roomNameOverrides) {
         setRoomNameOverrides(draft.roomNameOverrides);
       }
+      if (draft.sampleRequests) {
+        setSampleRequests(draft.sampleRequests);
+      }
       setDraftRestored(true);
     }, 0);
 
@@ -406,6 +424,7 @@ export function WindofyApp() {
       checkoutDetails,
       measurementOverrides,
       roomNameOverrides,
+      sampleRequests,
     };
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
@@ -421,6 +440,7 @@ export function WindofyApp() {
     measurementOverrides,
     renderedImageDataUrl,
     roomNameOverrides,
+    sampleRequests,
     selectedWindowId,
     uploadedFileName,
     uploadedImageDataUrl,
@@ -446,6 +466,7 @@ export function WindofyApp() {
     setCheckoutDetails(emptyCheckoutDetails);
     setMeasurementOverrides({});
     setRoomNameOverrides({});
+    setSampleRequests([]);
   };
 
   const handleMeasurementSave = (windowId: string, measurement: Measurement) => {
@@ -481,6 +502,39 @@ export function WindofyApp() {
       ...current,
       [roomId]: nextName,
     }));
+  };
+
+  const handleSampleRequest = (item: CheckoutCartItem) => {
+    if (!item.catalogProductId || !item.catalogProductName) {
+      return;
+    }
+
+    const catalogProductId = item.catalogProductId;
+    const catalogProductName = item.catalogProductName;
+
+    setSampleRequests((current) => {
+      const existing = current.find(
+        (request) => request.windowId === item.windowId && request.catalogProductId === catalogProductId,
+      );
+      if (existing) {
+        return current;
+      }
+
+      const colorName = selectedColor?.name ?? catalogProductName.split(" ").at(-1) ?? "Gekozen kleur";
+      return [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          windowId: item.windowId,
+          windowName: item.windowName,
+          roomName: item.roomName,
+          catalogProductId,
+          catalogProductName,
+          colorName,
+          requestedAt: new Date().toISOString(),
+        },
+      ];
+    });
   };
 
   const analyzeImageDataUrl = async (imageDataUrl: string, label: string) => {
@@ -671,6 +725,19 @@ export function WindofyApp() {
             onPaymentMethodChange={setPaymentMethod}
           />
         )}
+        {activeStep === "Account" && (
+          <AccountView
+            allWindows={allWindows}
+            cartItems={cartItems}
+            cartTotal={cartTotal}
+            draftOrder={draftOrder}
+            orderReference={orderReference}
+            sampleRequests={sampleRequests}
+            onContinueConfig={() => goTo("Ramencheck")}
+            onOrderLater={() => goTo("Checkout")}
+            onSampleRequest={handleSampleRequest}
+          />
+        )}
       </main>
     </div>
   );
@@ -696,6 +763,10 @@ function StickyHeader({ activeStep, onNavigate }: { activeStep: FlowStep; onNavi
           </button>
         ))}
       </nav>
+      <button className="ghost-button" onClick={() => onNavigate("Account")}>
+        <UserRound size={18} />
+        Account
+      </button>
       <button className="ghost-button" onClick={() => onNavigate("Checkout")}>
         <ShoppingBag size={18} />
         Cart
@@ -1707,6 +1778,112 @@ function PreviewView({
         <button className="secondary-button wide" onClick={applyCurrentConfigurationToAll}>Toepassen op alle ramen</button>
         <button className="primary-button wide" onClick={onCheckout}>Naar winkelwagen<ShoppingBag size={18} /></button>
       </aside>
+    </section>
+  );
+}
+
+function AccountView({
+  allWindows,
+  cartItems,
+  cartTotal,
+  draftOrder,
+  orderReference,
+  sampleRequests,
+  onContinueConfig,
+  onOrderLater,
+  onSampleRequest,
+}: {
+  allWindows: Array<WindowOpening & { roomName: string }>;
+  cartItems: CheckoutCartItem[];
+  cartTotal: number;
+  draftOrder: PreparedDraftOrder | null;
+  orderReference: string;
+  sampleRequests: SampleRequest[];
+  onContinueConfig: () => void;
+  onOrderLater: () => void;
+  onSampleRequest: (item: CheckoutCartItem) => void;
+}) {
+  const completedWindows = allWindows.filter((window) => window.measurement && window.configuration).length;
+  const reference = draftOrder?.reference ?? orderReference;
+
+  return (
+    <section className="flow-section checkout-grid">
+      <div>
+        <StepIndicator current="Account" />
+        <div className="section-heading compact">
+          <span className="eyebrow"><UserRound size={16} /> Mijn account</span>
+          <h1>Je project blijft klaarstaan.</h1>
+          <p>Bekijk opgeslagen ramen, configuraties, conceptbestelling en kleurstalen. Vanuit hier kun je later verder meten, aanpassen of bestellen.</p>
+        </div>
+        <div className="checkout-steps">
+          <span><Home size={17} /> {mockProject.name}</span>
+          <span><PanelTop size={17} /> {allWindows.length} ramen</span>
+          <span><Check size={17} /> {completedWindows} compleet</span>
+          <span><ShoppingBag size={17} /> {formatPrice(cartTotal)}</span>
+        </div>
+        <div className="account-list">
+          {allWindows.map((window) => {
+            const cartItem = cartItems.find((item) => item.windowId === window.id);
+            return (
+              <article className="account-window" key={window.id}>
+                <div>
+                  <strong>{window.name}</strong>
+                  <span>{window.roomName} - {statusLabels[window.status]}</span>
+                  <span>
+                    {window.measurement
+                      ? `${window.measurement.widthMm} x ${window.measurement.heightMm} mm`
+                      : "Maat ontbreekt"}
+                  </span>
+                  {cartItem?.catalogProductName && <span>{cartItem.catalogProductName}</span>}
+                </div>
+                <div className="account-actions">
+                  <button className="secondary-button" type="button" onClick={onContinueConfig}>
+                    Aanpassen<Settings2 size={17} />
+                  </button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={!cartItem?.catalogProductId}
+                    onClick={() => cartItem && onSampleRequest(cartItem)}
+                  >
+                    Staaltje<PackageCheck size={17} />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+      <aside className="cart-summary">
+        <h2>Later bestellen</h2>
+        <div className="cart-total"><span>Projecttotaal</span><strong>{formatPrice(cartTotal)}</strong></div>
+        <div className="cart-readiness">
+          <span><Check size={15} /> Opgeslagen in deze browser</span>
+          <span><Check size={15} /> {cartItems.length} bestelbare ramen</span>
+          <span className={reference ? "" : "warning"}>
+            {reference ? <Check size={15} /> : <CircleAlert size={15} />}
+            {reference ? `Concept ${reference}` : "Nog geen conceptbestelling"}
+          </span>
+        </div>
+        <button className="primary-button wide" type="button" onClick={onOrderLater}>
+          Bestelling openen<ArrowRight size={18} />
+        </button>
+      </aside>
+      <section className="admin-ready">
+        <h2>Aangevraagde staaltjes</h2>
+        <div>
+          {sampleRequests.length ? (
+            sampleRequests.map((request) => (
+              <span key={request.id}>
+                {request.catalogProductName}
+                <strong>{request.roomName} - {request.windowName}</strong>
+              </span>
+            ))
+          ) : (
+            <span>Nog geen staaltjes<strong>Kies per raam een gevisualiseerde kleur</strong></span>
+          )}
+        </div>
+      </section>
     </section>
   );
 }
