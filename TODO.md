@@ -17,6 +17,8 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Audit mobile purchase flow and checkout responsiveness with browser screenshots
 - [x] Persist checkout customer details and prepared order state across reloads
 - [x] Route checkout order preparation through a server-side draft order API
+- [x] Persist and display server draft order metadata after checkout
+- [x] Surface live AI guidance confidence/status and repeatable spoken instruction controls
 - [x] Final review
 
 ## Completion Marker

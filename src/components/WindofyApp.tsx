@@ -19,6 +19,7 @@ import {
   Settings2,
   ShoppingBag,
   Sparkles,
+  Volume2,
   Wand2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -53,6 +54,11 @@ type LiveGuideResult = {
   confidence?: number;
   issue?: string;
 };
+type LiveGuidanceMeta = {
+  language: string;
+  confidence: number;
+  issue: string;
+};
 type DraftState = {
   activeStep?: FlowStep;
   selectedWindowId?: string;
@@ -63,6 +69,7 @@ type DraftState = {
   renderedImageDataUrl?: string | null;
   paymentMethod?: "ideal" | "card";
   orderReference?: string;
+  draftOrder?: PreparedDraftOrder | null;
   checkoutDetails?: CheckoutDetails;
   measurementOverrides?: Record<string, Measurement>;
 };
@@ -84,9 +91,17 @@ type CheckoutCartItem = {
 type DraftOrderResponse = {
   ok?: boolean;
   error?: string;
-  order?: {
-    reference?: string;
-  };
+  order?: PreparedDraftOrder;
+};
+type PreparedDraftOrder = {
+  id: string;
+  reference: string;
+  status: "pending-payment";
+  paymentMethod: "ideal" | "card";
+  paymentProvider: "mollie" | "stripe";
+  totalCents: number;
+  itemCount: number;
+  createdAt: string;
 };
 type AnalysisResult = {
   qualityFailed?: boolean;
@@ -145,6 +160,17 @@ const statusLabels: Record<WindowStatus, string> = {
   "missing-measurement": "Maat ontbreekt",
   "needs-review": "Controle nodig",
 };
+const guidanceIssueLabels: Record<string, string> = {
+  angled: "Camera staat scheef",
+  no_window: "Geen raam in beeld",
+  none: "Frame bruikbaar",
+  reflection: "Reflectie zichtbaar",
+  too_blurry: "Beeld is onscherp",
+  too_close: "Te dichtbij",
+  too_dark: "Te donker",
+  too_far: "Te ver weg",
+  window_cut_off: "Raam valt buiten beeld",
+};
 
 const DUTCH_LOCALE = "nl-NL";
 const DRAFT_STORAGE_KEY = "windofy.configurator.draft.v1";
@@ -158,6 +184,9 @@ const emptyCheckoutDetails: CheckoutDetails = {
 
 const formatPrice = (cents: number) =>
   new Intl.NumberFormat(DUTCH_LOCALE, { style: "currency", currency: "EUR" }).format(cents / 100);
+
+const formatConfidence = (value: number) =>
+  new Intl.NumberFormat(DUTCH_LOCALE, { maximumFractionDigits: 0, style: "percent" }).format(value);
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -217,6 +246,7 @@ export function WindofyApp() {
   const [renderError, setRenderError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"ideal" | "card">("ideal");
   const [orderReference, setOrderReference] = useState("");
+  const [draftOrder, setDraftOrder] = useState<PreparedDraftOrder | null>(null);
   const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(emptyCheckoutDetails);
   const [measurementOverrides, setMeasurementOverrides] = useState<Record<string, Measurement>>({});
   const [draftRestored, setDraftRestored] = useState(false);
@@ -296,6 +326,9 @@ export function WindofyApp() {
       if (draft.orderReference) {
         setOrderReference(draft.orderReference);
       }
+      if (typeof draft.draftOrder !== "undefined") {
+        setDraftOrder(draft.draftOrder);
+      }
       if (draft.checkoutDetails) {
         setCheckoutDetails({ ...emptyCheckoutDetails, ...draft.checkoutDetails });
       }
@@ -323,6 +356,7 @@ export function WindofyApp() {
       renderedImageDataUrl,
       paymentMethod,
       orderReference,
+      draftOrder,
       checkoutDetails,
       measurementOverrides,
     };
@@ -332,6 +366,7 @@ export function WindofyApp() {
     analysisResult,
     checkoutDetails,
     configuration,
+    draftOrder,
     draftRestored,
     orderReference,
     paymentMethod,
@@ -357,6 +392,7 @@ export function WindofyApp() {
     setRenderError("");
     setPaymentMethod("ideal");
     setOrderReference("");
+    setDraftOrder(null);
     setCheckoutDetails(emptyCheckoutDetails);
     setMeasurementOverrides({});
   };
@@ -536,10 +572,12 @@ export function WindofyApp() {
             cartItems={cartItems}
             cartTotal={cartTotal}
             checkoutDetails={checkoutDetails}
+            draftOrder={draftOrder}
             orderReference={orderReference}
             paymentMethod={paymentMethod}
             onClearDraft={clearDraft}
             onCheckoutDetailsChange={setCheckoutDetails}
+            onDraftOrderChange={setDraftOrder}
             onOrderReferenceChange={setOrderReference}
             onPaymentMethodChange={setPaymentMethod}
           />
@@ -723,6 +761,7 @@ function InputView({
   const [voiceGuideStatus, setVoiceGuideStatus] = useState<PipelineStatus>("idle");
   const [voiceGuideError, setVoiceGuideError] = useState("");
   const [liveInstruction, setLiveInstruction] = useState("");
+  const [liveGuidanceMeta, setLiveGuidanceMeta] = useState<LiveGuidanceMeta | null>(null);
   const [measurementReady, setMeasurementReady] = useState(false);
 
   useEffect(() => {
@@ -781,6 +820,9 @@ function InputView({
       videoRef.current.srcObject = null;
     }
     setLiveStatus("idle");
+    setLiveGuidanceMeta(null);
+    setLiveInstruction("");
+    setMeasurementReady(false);
   };
 
   const captureLiveFrame = () => {
@@ -841,6 +883,11 @@ function InputView({
       const instruction = guidance.instruction?.trim() || "Houd de camera stil en richt hem op het hele raam.";
       lastInstructionRef.current = instruction;
       setLiveInstruction(instruction);
+      setLiveGuidanceMeta({
+        language: guidance.language || DUTCH_LOCALE,
+        confidence: typeof guidance.confidence === "number" ? guidance.confidence : 0,
+        issue: guidance.issue || "none",
+      });
       setMeasurementReady(Boolean(guidance.measurementReady));
       setVoiceGuideStatus("success");
       speakInstruction(instruction);
@@ -902,10 +949,21 @@ function InputView({
                 <Sparkles size={18} />
                 {voiceGuideActive ? "Spraakcoach stoppen" : "AI spraakcoach starten"}
               </button>
+              <button className="secondary-button" disabled={!liveInstruction || isAnalyzing} onClick={() => speakInstruction(liveInstruction)}>
+                <Volume2 size={18} />
+                Herhaal instructie
+              </button>
               <button className="secondary-button" disabled={isAnalyzing || voiceGuideStatus === "loading"} onClick={analyzeLiveFrame}>
                 <Wand2 size={18} />
                 Analyseer live frame
               </button>
+              {liveGuidanceMeta && (
+                <div className="live-guidance-meta" aria-label="Live AI meetstatus">
+                  <span>Taal <strong>{liveGuidanceMeta.language}</strong></span>
+                  <span>Zekerheid <strong>{formatConfidence(liveGuidanceMeta.confidence)}</strong></span>
+                  <span>Status <strong>{guidanceIssueLabels[liveGuidanceMeta.issue] ?? liveGuidanceMeta.issue}</strong></span>
+                </div>
+              )}
             </div>
           )}
           <div className={liveStatus === "active" ? "camera-frame has-live" : uploadedImageDataUrl ? "camera-frame has-photo" : "camera-frame"}>
@@ -1483,30 +1541,43 @@ function CheckoutView({
   cartItems,
   cartTotal,
   checkoutDetails,
+  draftOrder,
   orderReference,
   paymentMethod,
   onClearDraft,
   onCheckoutDetailsChange,
+  onDraftOrderChange,
   onOrderReferenceChange,
   onPaymentMethodChange,
 }: {
   cartItems: CheckoutCartItem[];
   cartTotal: number;
   checkoutDetails: CheckoutDetails;
+  draftOrder: PreparedDraftOrder | null;
   orderReference: string;
   paymentMethod: "ideal" | "card";
   onClearDraft: () => void;
   onCheckoutDetailsChange: (value: CheckoutDetails) => void;
+  onDraftOrderChange: (value: PreparedDraftOrder | null) => void;
   onOrderReferenceChange: (value: string) => void;
   onPaymentMethodChange: (value: "ideal" | "card") => void;
 }) {
   const [checkoutError, setCheckoutError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const missingMeasurements = cartItems.filter((item) => !item.measurement);
+  const preparedReference = draftOrder?.reference ?? orderReference;
   const updateCheckoutField = (field: keyof CheckoutDetails, value: string) => {
     onCheckoutDetailsChange({ ...checkoutDetails, [field]: value });
-    if (orderReference) {
+    if (preparedReference) {
       onOrderReferenceChange("");
+      onDraftOrderChange(null);
+    }
+  };
+  const updatePaymentMethod = (value: "ideal" | "card") => {
+    onPaymentMethodChange(value);
+    if (preparedReference) {
+      onOrderReferenceChange("");
+      onDraftOrderChange(null);
     }
   };
 
@@ -1561,6 +1632,7 @@ function CheckoutView({
       }
 
       onCheckoutDetailsChange(normalizedDetails);
+      onDraftOrderChange(payload.order);
       onOrderReferenceChange(payload.order.reference);
     } catch {
       setCheckoutError("Bestelling kon niet worden voorbereid. Controleer de verbinding en probeer opnieuw.");
@@ -1598,14 +1670,14 @@ function CheckoutView({
             <button
               className={paymentMethod === "ideal" ? "payment-method active" : "payment-method"}
               type="button"
-              onClick={() => onPaymentMethodChange("ideal")}
+              onClick={() => updatePaymentMethod("ideal")}
             >
               iDEAL
             </button>
             <button
               className={paymentMethod === "card" ? "payment-method active" : "payment-method"}
               type="button"
-              onClick={() => onPaymentMethodChange("card")}
+              onClick={() => updatePaymentMethod("card")}
             >
               Kaart
             </button>
@@ -1615,10 +1687,16 @@ function CheckoutView({
             <span>Ik bevestig dat de raamafmetingen en configuratie gecontroleerd zijn.</span>
           </label>
           {checkoutError && <div className="pipeline-notice error">{checkoutError}</div>}
-          {orderReference && (
+          {preparedReference && (
             <div className="pipeline-notice success">
               <strong>Bestelling voorbereid</strong>
-              <span>Referentie {orderReference}. {checkoutDetails.name} ontvangt de betaalinstructie via {checkoutDetails.email}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
+              <span>Referentie {preparedReference}. {checkoutDetails.name} ontvangt de betaalinstructie via {checkoutDetails.email}. Betaalmethode: {paymentMethod === "ideal" ? "iDEAL" : "kaart"}.</span>
+              {draftOrder && (
+                <span>
+                  Status: betaling klaarzetten. Provider: {draftOrder.paymentProvider === "mollie" ? "Mollie" : "Stripe"}.
+                  Orderregels: {draftOrder.itemCount}. Totaal: {formatPrice(draftOrder.totalCents)}.
+                </span>
+              )}
             </div>
           )}
           <div className="checkout-actions">
