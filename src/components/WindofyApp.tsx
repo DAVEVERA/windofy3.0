@@ -81,6 +81,7 @@ type DraftState = {
   measurementOverrides?: Record<string, Measurement>;
   roomNameOverrides?: Record<string, string>;
   sampleRequests?: SampleRequest[];
+  customWindows?: WindowOpening[];
 };
 type CheckoutDetails = {
   name: string;
@@ -293,6 +294,7 @@ export function WindofyApp() {
   const [measurementOverrides, setMeasurementOverrides] = useState<Record<string, Measurement>>({});
   const [roomNameOverrides, setRoomNameOverrides] = useState<Record<string, string>>({});
   const [sampleRequests, setSampleRequests] = useState<SampleRequest[]>([]);
+  const [customWindows, setCustomWindows] = useState<WindowOpening[]>([]);
   const [draftRestored, setDraftRestored] = useState(false);
 
   const allWindows = useMemo(
@@ -310,8 +312,16 @@ export function WindofyApp() {
             roomName,
           };
         }),
+      ).concat(
+        customWindows.map((window) => ({
+          ...window,
+          status: measurementOverrides[window.id] ? "needs-review" as WindowStatus : window.status,
+          measurement: measurementOverrides[window.id] ?? window.measurement,
+          configuration: configurationOverrides[window.id] ?? window.configuration,
+          roomName: roomNameOverrides[window.roomId] ?? "Geuploade ramen",
+        })),
       ),
-    [configurationOverrides, measurementOverrides, roomNameOverrides],
+    [configurationOverrides, customWindows, measurementOverrides, roomNameOverrides],
   );
 
   const selectedWindow = allWindows.find((window) => window.id === selectedWindowId) ?? allWindows[0];
@@ -403,6 +413,9 @@ export function WindofyApp() {
       if (draft.sampleRequests) {
         setSampleRequests(draft.sampleRequests);
       }
+      if (draft.customWindows) {
+        setCustomWindows(draft.customWindows);
+      }
       setDraftRestored(true);
     }, 0);
 
@@ -430,12 +443,14 @@ export function WindofyApp() {
       measurementOverrides,
       roomNameOverrides,
       sampleRequests,
+      customWindows,
     };
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
     activeStep,
     analysisResult,
     checkoutDetails,
+    customWindows,
     configuration,
     configurationOverrides,
     draftOrder,
@@ -472,6 +487,7 @@ export function WindofyApp() {
     setMeasurementOverrides({});
     setRoomNameOverrides({});
     setSampleRequests([]);
+    setCustomWindows([]);
   };
 
   const handleMeasurementSave = (windowId: string, measurement: Measurement) => {
@@ -587,6 +603,47 @@ export function WindofyApp() {
     }
   };
 
+  const handlePhotoBatchUpload = async (files: File[]) => {
+    const validFiles = files.filter((file) => /^image\/(png|jpe?g|webp)$/i.test(file.type) && file.size <= 12 * 1024 * 1024);
+    if (!validFiles.length) {
+      setAnalysisStatus("error");
+      setAnalysisError("Upload minimaal een PNG, JPG, JPEG of WEBP foto van maximaal 12 MB.");
+      return;
+    }
+
+    try {
+      const createdAt = new Date().toISOString();
+      const windows = await Promise.all(
+        validFiles.map(async (file, index) => {
+          const dataUrl = await readFileAsDataUrl(file);
+          const id = `uploaded-window-${Date.now()}-${index}`;
+          return {
+            id,
+            roomId: "room-uploads",
+            name: `Upload raam ${customWindows.length + index + 1}`,
+            status: "missing-measurement" as WindowStatus,
+            photos: [
+              {
+                id: `photo-${id}`,
+                url: dataUrl,
+                alt: file.name,
+                capturedAt: createdAt,
+              },
+            ],
+            notes: "Toegevoegd via foto-upload route.",
+          };
+        }),
+      );
+
+      setCustomWindows((current) => [...current, ...windows]);
+      setSelectedWindowId(windows[0].id);
+      await analyzeImageDataUrl(windows[0].photos[0].url, validFiles[0].name);
+    } catch (error) {
+      setAnalysisStatus("error");
+      setAnalysisError(error instanceof Error ? error.message : "Fotos konden niet worden verwerkt.");
+    }
+  };
+
   const handleLiveFrameAnalyze = (imageDataUrl: string) =>
     analyzeImageDataUrl(imageDataUrl, `Live camera frame ${new Date().toLocaleTimeString(DUTCH_LOCALE)}`);
 
@@ -673,6 +730,7 @@ export function WindofyApp() {
             onLiveFrameAnalyze={handleLiveFrameAnalyze}
             onLiveGuidance={handleLiveGuidance}
             onManualMeasurementSave={handleMeasurementSave}
+            onPhotoBatchUpload={handlePhotoBatchUpload}
             onPhotoUpload={handlePhotoUpload}
             uploadedFileName={uploadedFileName}
             uploadedImageDataUrl={uploadedImageDataUrl}
@@ -894,6 +952,7 @@ function InputView({
   onLiveFrameAnalyze,
   onLiveGuidance,
   onManualMeasurementSave,
+  onPhotoBatchUpload,
   onPhotoUpload,
   uploadedFileName,
   uploadedImageDataUrl,
@@ -910,6 +969,7 @@ function InputView({
     measurementStage: LiveMeasurementStage,
   ) => Promise<LiveGuideResult>;
   onManualMeasurementSave: (windowId: string, measurement: Measurement) => void;
+  onPhotoBatchUpload: (files: File[]) => void;
   onPhotoUpload: (file: File) => void;
   uploadedFileName: string;
   uploadedImageDataUrl: string | null;
@@ -1233,6 +1293,23 @@ function InputView({
                   const file = event.target.files?.[0];
                   if (file) {
                     onPhotoUpload(file);
+                  }
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+            <label className="secondary-button file-upload">
+              <Layers3 size={18} />
+              Ramen uploaden
+              <input
+                accept="image/png,image/jpeg,image/webp"
+                disabled={isAnalyzing}
+                multiple
+                type="file"
+                onChange={(event) => {
+                  const files = Array.from(event.target.files ?? []);
+                  if (files.length) {
+                    onPhotoBatchUpload(files);
                   }
                   event.currentTarget.value = "";
                 }}
