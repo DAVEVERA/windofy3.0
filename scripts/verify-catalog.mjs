@@ -66,6 +66,31 @@ async function assertReadyImages() {
   }
 }
 
+function leafKey(product) {
+  return `${product.groupId}:${product.subgroupId ?? ""}`;
+}
+
+function assertRepresentativeImageCoverage() {
+  const leafKeys = new Set(catalogCompleteness.productsPerLeaf.map((item) => `${item.groupId}:${item.subgroupId ?? ""}`));
+  const readyByLeaf = new Map();
+
+  for (const product of catalogProducts.filter((item) => item.image.status === "ready")) {
+    const key = leafKey(product);
+    readyByLeaf.set(key, (readyByLeaf.get(key) ?? 0) + 1);
+  }
+
+  const uncovered = [...leafKeys].filter((key) => !readyByLeaf.has(key));
+  if (uncovered.length) {
+    fail(`Leaf collections without a representative ready image: ${JSON.stringify(uncovered)}`);
+  }
+
+  const overfilled = [...readyByLeaf.entries()].filter(([, count]) => count > 2);
+  if (overfilled.length) {
+    fail(`Leaf collections exceed the max 2 ready representative images: ${JSON.stringify(overfilled)}`);
+  }
+}
+
 assertCompleteness();
 await assertReadyImages();
+assertRepresentativeImageCoverage();
 console.log(JSON.stringify(catalogCompleteness));

@@ -1,13 +1,14 @@
 # Catalog Image Production
 
-Windofy requires one truthful, inspected product image for every catalog product.
+Windofy currently uses at most two truthful, inspected representative product images per leaf product group.
 
 Current production rule:
 
 - `src/data/catalog.ts` is the source of truth for every product image prompt.
-- `npm run catalog:images` writes `docs/catalog-image-backlog.json` for every product still marked `pending-generation`.
+- `npm run catalog:images` writes `docs/catalog-image-backlog.json` for products that can still fill the maximum two ready representative images per leaf product group.
 - Generated images must be saved to `public/catalog/products/<product.image.fileName>`.
 - A product may only move to `status: "ready"` after visual inspection against its `qaChecklist`.
+- A leaf product group must have at least one and at most two ready representative images.
 - Ready products must include `reviewNotes` explaining the inspection result.
 
 ## Acceptance Criteria

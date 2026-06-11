@@ -240,6 +240,50 @@ const readyProductImages: Record<string, { url: string; reviewNotes: string }> =
     url: "/catalog/products/duo-roller-blinds-01.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white duo roller blind with alternating opaque and sheer textile bands, top roll, bottom rail and white frame, no text, no logo, no watermark.",
   },
+  "electric-roller-blinds-01": {
+    url: "/catalog/products/electric-roller-blinds-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white motorized roller blind with compact top tube, smooth textile panel, bottom rail and white frame, no chain, no text, no logo, no watermark.",
+  },
+  "vertical-blinds-01": {
+    url: "/catalog/products/vertical-blinds-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white vertical fabric slats on a top rail in a white frame, no text, no logo, no watermark.",
+  },
+  "shutters-01": {
+    url: "/catalog/products/shutters-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white wooden shutter frame with broad tilting louvers, no text, no logo, no watermark.",
+  },
+  "insect-screens-01": {
+    url: "/catalog/products/insect-screens-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic white insect screen frame with fine mesh texture, no text, no logo, no watermark.",
+  },
+  "perfect-fit-01": {
+    url: "/catalog/products/perfect-fit-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white Perfect Fit clamp frame mounted in the glass bead with integrated textile, no text, no logo, no watermark.",
+  },
+  "roof-window-decoration-01": {
+    url: "/catalog/products/roof-window-decoration-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white roof-window blind with side guides on a sloped roof window, no text, no logo, no watermark.",
+  },
+  "single-pleat-curtains-01": {
+    url: "/catalog/products/single-pleat-curtains-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white single-pleat curtains with restrained fabric volume on a rail, no text, no logo, no watermark.",
+  },
+  "double-pleat-curtains-01": {
+    url: "/catalog/products/double-pleat-curtains-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white double-pleat curtains with fuller regular fabric fall on a rail, no text, no logo, no watermark.",
+  },
+  "triple-pleat-curtains-01": {
+    url: "/catalog/products/triple-pleat-curtains-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white triple-pleat curtains with rich deep fabric fall on a rail, no text, no logo, no watermark.",
+  },
+  "eyelet-curtains-01": {
+    url: "/catalog/products/eyelet-curtains-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white eyelet curtains with visible round rings on a rod, no text, no logo, no watermark.",
+  },
+  "blackout-curtains-01": {
+    url: "/catalog/products/blackout-curtains-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white blackout curtains with dense opaque fabric, no text, no logo, no watermark.",
+  },
   "roller-blinds-02": {
     url: "/catalog/products/roller-blinds-linnen.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic linen roller blind fabric, correct top tube, no text, no logo, no watermark.",
