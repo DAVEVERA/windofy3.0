@@ -278,6 +278,7 @@ export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSp
       image: {
         status: readyImage ? "ready" : "pending-generation",
         alt: `${productName} als waarheidsgetrouwe raamdecoratie productvisual.`,
+        fileName: `${productId}.png`,
         prompt: [
           "Realistische studio productfoto voor een Nederlandse raamdecoratie webshop.",
           `Product: ${productName}.`,
@@ -286,6 +287,18 @@ export const catalogProducts: CatalogProduct[] = productSpecs.flatMap((productSp
           "Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking.",
           "Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.",
         ].join(" "),
+        negativePrompt: [
+          "Geen logo's, watermerken, prijsteksten, labels, mensen, handen, extra meubels of rommel.",
+          "Geen vervormd raam, zwevend product, onjuiste lamelrichting, onrealistische plooien of verkeerde kleur.",
+          "Geen generieke stoftextuur wanneer het product jaloezie, shutter, hor of dakraamsysteem moet zijn.",
+        ].join(" "),
+        qaChecklist: [
+          "Producttype en constructie komen overeen met categorie en subcategorie.",
+          "Kleur en materiaal passen bij colorHex, colorName en materialFamily.",
+          "Product is gemonteerd in of op een realistisch wit kozijn met correcte schaal.",
+          "Beeld bevat geen tekst, logo, watermerk, verpakking, mensen of afleidende props.",
+          "Licht, schaduw, randen en perspectief ogen realistisch voor webshopgebruik.",
+        ],
         url: readyImage?.url,
         referenceSourceUrl: productSpec.referenceSourceUrl,
         reviewNotes: readyImage?.reviewNotes,

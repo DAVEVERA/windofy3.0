@@ -166,7 +166,10 @@ export interface CatalogSubgroup {
 export interface CatalogProductImage {
   status: "pending-generation" | "ready";
   alt: string;
+  fileName: string;
   prompt: string;
+  negativePrompt: string;
+  qaChecklist: string[];
   url?: string;
   referenceSourceUrl?: string;
   reviewNotes?: string;

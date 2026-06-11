@@ -18,8 +18,25 @@ function assertCompleteness() {
 }
 
 async function assertReadyImages() {
-  const readyProducts = catalogProducts.filter((product) => product.image.status === "ready");
+  for (const product of catalogProducts) {
+    if (!product.image.fileName?.endsWith(".png")) {
+      fail(`${product.id} image fileName must be a PNG filename`);
+    }
 
+    if (!product.image.prompt || product.image.prompt.length < 180) {
+      fail(`${product.id} image prompt is too weak for production generation`);
+    }
+
+    if (!product.image.negativePrompt || product.image.negativePrompt.length < 120) {
+      fail(`${product.id} image negativePrompt is too weak for production generation`);
+    }
+
+    if (!Array.isArray(product.image.qaChecklist) || product.image.qaChecklist.length < 5) {
+      fail(`${product.id} image QA checklist must contain at least 5 checks`);
+    }
+  }
+
+  const readyProducts = catalogProducts.filter((product) => product.image.status === "ready");
   for (const product of readyProducts) {
     if (!product.image.url?.startsWith("/")) {
       fail(`${product.id} is ready but has no root-relative image URL`);
