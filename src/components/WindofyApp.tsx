@@ -174,6 +174,11 @@ type SampleRequest = {
   colorHex: string;
   requestedAt: string;
 };
+type CatalogProductCardImage = {
+  url: string;
+  alt: string;
+  isRepresentative: boolean;
+};
 type AnalysisResult = {
   qualityFailed?: boolean;
   qualityFeedback?: string;
@@ -367,6 +372,39 @@ function readSharedProjectState(): ShareableProjectState | null {
   }
 
   return decodeShareableProject(hash.slice(SHARE_HASH_PREFIX.length));
+}
+
+function catalogProductCardImage(product: (typeof catalogProducts)[number]): CatalogProductCardImage | null {
+  if (product.image.status === "ready" && product.image.url) {
+    return {
+      url: product.image.url,
+      alt: product.image.alt,
+      isRepresentative: false,
+    };
+  }
+
+  const representative =
+    catalogProducts.find(
+      (candidate) =>
+        candidate.image.status === "ready" &&
+        Boolean(candidate.image.url) &&
+        candidate.groupId === product.groupId &&
+        candidate.subgroupId === product.subgroupId,
+    ) ??
+    catalogProducts.find(
+      (candidate) =>
+        candidate.image.status === "ready" &&
+        Boolean(candidate.image.url) &&
+        candidate.groupId === product.groupId,
+    );
+
+  return representative?.image.url
+    ? {
+        url: representative.image.url,
+        alt: `Representatieve productfoto voor ${product.name}.`,
+        isRepresentative: true,
+      }
+    : null;
 }
 
 export function WindofyApp() {
@@ -1982,21 +2020,27 @@ function ConfiguratorView({
         </SelectorGroup>
         <SelectorGroup label="Productkeuze">
           <div className="catalog-product-grid">
-            {visibleCatalogProducts.map((product) => (
-              <button
-                key={product.id}
-                className={configuration.catalogProductId === product.id ? "catalog-product active" : "catalog-product"}
-                onClick={() => patchConfiguration({ catalogProductId: product.id })}
-              >
-                {product.image.status === "ready" && product.image.url ? (
-                  <Image src={product.image.url} alt={product.image.alt} width={320} height={240} />
-                ) : (
-                  <span style={{ backgroundColor: product.colorHex }} />
-                )}
-                <strong>{product.name}</strong>
-                <small>{formatPrice(product.basePriceCents)} + m2 prijs</small>
-              </button>
-            ))}
+            {visibleCatalogProducts.map((product) => {
+              const cardImage = catalogProductCardImage(product);
+              return (
+                <button
+                  key={product.id}
+                  className={configuration.catalogProductId === product.id ? "catalog-product active" : "catalog-product"}
+                  onClick={() => patchConfiguration({ catalogProductId: product.id })}
+                >
+                  <span className="catalog-product-media">
+                    {cardImage ? (
+                      <Image src={cardImage.url} alt={cardImage.alt} width={320} height={240} />
+                    ) : (
+                      <i style={{ backgroundColor: product.colorHex }} aria-hidden="true" />
+                    )}
+                    {cardImage?.isRepresentative && <em>Representatief</em>}
+                  </span>
+                  <strong>{product.name}</strong>
+                  <small>{formatPrice(product.basePriceCents)} + m2 prijs</small>
+                </button>
+              );
+            })}
           </div>
         </SelectorGroup>
         <div className="pipeline-notice muted">

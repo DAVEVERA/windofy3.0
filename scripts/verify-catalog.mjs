@@ -88,6 +88,31 @@ function assertRepresentativeImageCoverage() {
   if (overfilled.length) {
     fail(`Leaf collections exceed the max 2 ready representative images: ${JSON.stringify(overfilled)}`);
   }
+
+  for (const product of catalogProducts) {
+    if (product.image.status === "ready" && product.image.url) {
+      continue;
+    }
+
+    const representative =
+      catalogProducts.find(
+        (candidate) =>
+          candidate.image.status === "ready" &&
+          Boolean(candidate.image.url) &&
+          candidate.groupId === product.groupId &&
+          candidate.subgroupId === product.subgroupId,
+      ) ??
+      catalogProducts.find(
+        (candidate) =>
+          candidate.image.status === "ready" &&
+          Boolean(candidate.image.url) &&
+          candidate.groupId === product.groupId,
+      );
+
+    if (!representative) {
+      fail(`Product ${product.id} has no ready representative image fallback`);
+    }
+  }
 }
 
 assertCompleteness();
