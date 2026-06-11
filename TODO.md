@@ -35,6 +35,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Add server-side Supabase sample-order sync route for account color samples
 - [x] Add real Supabase Auth client/session flow and replace temporary access-token bridge
 - [x] Add production AI service readiness contract and Render deployment blueprint
+- [ ] Configure a production AI backend secret: either Vercel `OPENAI_API_KEY` for serverless fallback or public `AI_SERVICE_URL` for the Python AI service
 - [x] Add first generated, inspected, ready product image and seed asset URL
 - [x] Add strict ready-image file verification and first multi-category ready image batch
 - [x] Generate, store, inspect, and approve accurate representative product images with max two ready images per leaf product group
