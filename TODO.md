@@ -43,6 +43,7 @@ Harden the Windofy app across the requested engineering disciplines: AI window a
 - [x] Merge configuration and visualization into one customer step
 - [x] Support multi-window photo upload route with dimensions per window and saved project state
 - [x] Add My Account environment for saved projects, windows, visualizations, draft orders, later ordering, and sample orders
+- [x] Add shareable project link that restores windows, measurements, configurations, samples, and checkout state
 - [x] Add color sample ordering per visualized window color
 - [x] Redesign the UI palette and mobile-first layout into a calm, modern, cohesive interface
 - [x] Add Dutch journey copy, instructions, info bullets, and infotutorial context per phase

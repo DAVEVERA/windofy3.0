@@ -18,6 +18,7 @@ import {
   Ruler,
   Save,
   Settings2,
+  Share2,
   ShoppingBag,
   Sparkles,
   UserRound,
@@ -89,6 +90,11 @@ type DraftState = {
   roomNameOverrides?: Record<string, string>;
   sampleRequests?: SampleRequest[];
   customWindows?: WindowOpening[];
+};
+type ShareableProjectState = Partial<DraftState> & {
+  version: 1;
+  projectName: string;
+  sharedAt: string;
 };
 type CheckoutDetails = {
   name: string;
@@ -270,6 +276,7 @@ const measurementStageLabels: Record<LiveMeasurementStage, string> = {
 
 const DUTCH_LOCALE = "nl-NL";
 const DRAFT_STORAGE_KEY = "windofy.configurator.draft.v1";
+const SHARE_HASH_PREFIX = "windofyProject=";
 const emptyCheckoutDetails: CheckoutDetails = {
   name: "",
   email: "",
@@ -324,6 +331,42 @@ function readDraftState(): DraftState | null {
   } catch {
     return null;
   }
+}
+
+function encodeShareableProject(project: ShareableProjectState) {
+  const json = JSON.stringify(project);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeShareableProject(encoded: string): ShareableProjectState | null {
+  try {
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Partial<ShareableProjectState>;
+    return parsed.version === 1 ? (parsed as ShareableProjectState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSharedProjectState(): ShareableProjectState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const hash = window.location.hash.replace(/^#/, "");
+  if (!hash.startsWith(SHARE_HASH_PREFIX)) {
+    return null;
+  }
+
+  return decodeShareableProject(hash.slice(SHARE_HASH_PREFIX.length));
 }
 
 export function WindofyApp() {
@@ -414,7 +457,8 @@ export function WindofyApp() {
 
   useEffect(() => {
     const restoreTimer = window.setTimeout(() => {
-      const draft = readDraftState();
+      const sharedProject = readSharedProjectState();
+      const draft = sharedProject ?? readDraftState();
       if (!draft) {
         setDraftRestored(true);
         return;
@@ -545,6 +589,9 @@ export function WindofyApp() {
 
   const clearDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (window.location.hash.startsWith(`#${SHARE_HASH_PREFIX}`)) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
     setActiveStep("Home");
     setSelectedWindowId("window-front");
     setConfiguration(mockProject.rooms[0].windows[0].configuration!);
@@ -565,6 +612,34 @@ export function WindofyApp() {
     setRoomNameOverrides({});
     setSampleRequests([]);
     setCustomWindows([]);
+  };
+
+  const createProjectShareLink = async () => {
+    const shareState: ShareableProjectState = {
+      version: 1,
+      projectName: mockProject.name,
+      sharedAt: new Date().toISOString(),
+      activeStep,
+      selectedWindowId,
+      configuration,
+      configurationOverrides,
+      measurementOverrides,
+      roomNameOverrides,
+      sampleRequests,
+      customWindows,
+      paymentMethod,
+      orderReference,
+      draftOrder,
+      checkoutDetails,
+    };
+    const encodedProject = encodeShareableProject(shareState);
+    const link = `${window.location.origin}${window.location.pathname}${window.location.search}#${SHARE_HASH_PREFIX}${encodedProject}`;
+    if (!navigator.clipboard?.writeText) {
+      window.prompt("Kopieer deze projectlink", link);
+      return link;
+    }
+    await navigator.clipboard.writeText(link);
+    return link;
   };
 
   const handleMeasurementSave = (windowId: string, measurement: Measurement) => {
@@ -958,6 +1033,7 @@ export function WindofyApp() {
             sampleRequests={sampleRequests}
             onContinueConfig={() => goTo("Ramencheck")}
             onCloudSync={handleProjectCloudSync}
+            onCreateShareLink={createProjectShareLink}
             onOrderLater={() => goTo("Checkout")}
             onSignIn={handleMagicLinkSignIn}
             onSignOut={handleSignOut}
@@ -2070,6 +2146,7 @@ function AccountView({
   sampleRequests,
   onContinueConfig,
   onCloudSync,
+  onCreateShareLink,
   onOrderLater,
   onSignIn,
   onSignOut,
@@ -2086,6 +2163,7 @@ function AccountView({
   sampleRequests: SampleRequest[];
   onContinueConfig: () => void;
   onCloudSync: () => Promise<ProjectSyncResponse>;
+  onCreateShareLink: () => Promise<string>;
   onOrderLater: () => void;
   onSignIn: (email: string) => Promise<void>;
   onSignOut: () => Promise<void>;
@@ -2098,6 +2176,8 @@ function AccountView({
   const [syncMessage, setSyncMessage] = useState("");
   const [sampleSyncStatus, setSampleSyncStatus] = useState<PipelineStatus>("idle");
   const [sampleSyncMessage, setSampleSyncMessage] = useState("");
+  const [shareStatus, setShareStatus] = useState<PipelineStatus>("idle");
+  const [shareMessage, setShareMessage] = useState("");
   const [authEmailInput, setAuthEmailInput] = useState(authEmail ?? "");
   const [authActionStatus, setAuthActionStatus] = useState<PipelineStatus>("idle");
   const [authMessage, setAuthMessage] = useState("");
@@ -2137,6 +2217,19 @@ function AccountView({
     } catch (error) {
       setSampleSyncStatus("error");
       setSampleSyncMessage(error instanceof Error ? error.message : "Staaltjes sync is mislukt.");
+    }
+  };
+
+  const copyShareLink = async () => {
+    setShareStatus("loading");
+    setShareMessage("");
+    try {
+      await onCreateShareLink();
+      setShareStatus("success");
+      setShareMessage("Projectlink gekopieerd. Ramen, maten, configuraties en staaltjes zitten in de link; foto's blijven lokaal.");
+    } catch (error) {
+      setShareStatus("error");
+      setShareMessage(error instanceof Error ? error.message : "Projectlink kon niet worden gekopieerd.");
     }
   };
 
@@ -2271,6 +2364,14 @@ function AccountView({
         <button className="primary-button wide" type="button" onClick={onOrderLater}>
           Bestelling openen<ArrowRight size={18} />
         </button>
+        <button className="secondary-button wide" type="button" disabled={shareStatus === "loading"} onClick={copyShareLink}>
+          {shareStatus === "loading" ? "Link maken..." : "Projectlink kopiëren"}<Share2 size={18} />
+        </button>
+        {shareMessage && (
+          <div className={shareStatus === "success" ? "pipeline-notice success" : "pipeline-notice error"}>
+            {shareMessage}
+          </div>
+        )}
         <button className="secondary-button wide" type="button" disabled={syncStatus === "loading"} onClick={syncProject}>
           {syncStatus === "loading" ? "Cloud opslaan..." : "Project in Mijn account opslaan"}<Save size={18} />
         </button>
