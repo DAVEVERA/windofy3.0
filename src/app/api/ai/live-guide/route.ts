@@ -1,4 +1,5 @@
-import { assertImageDataUrl, callAiService, errorResponse } from "@/lib/aiBackend";
+import { assertImageDataUrl, errorResponse } from "@/lib/aiBackend";
+import { callVisionRuntime } from "@/lib/aiRuntime";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     assertImageDataUrl(body?.imageDataUrl);
 
-    const data = await callAiService<Record<string, unknown>>(
+    const data = await callVisionRuntime<Record<string, unknown>>(
       "/api/live-guide",
       {
         imageDataUrl: body.imageDataUrl,

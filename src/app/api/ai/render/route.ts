@@ -1,4 +1,5 @@
-import { assertImageDataUrl, callAiService, errorResponse } from "@/lib/aiBackend";
+import { assertImageDataUrl, errorResponse } from "@/lib/aiBackend";
+import { callVisionRuntime } from "@/lib/aiRuntime";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
       return Response.json({ ok: false, error: "Configuratie ontbreekt." }, { status: 400 });
     }
 
-    const data = await callAiService<{ imageDataUrl: string }>("/api/render", {
+    const data = await callVisionRuntime<{ imageDataUrl: string }>("/api/render", {
       imageDataUrl: body.imageDataUrl,
       config: body.config,
       state: typeof body.state === "string" ? body.state : "Geheel uitgerold",

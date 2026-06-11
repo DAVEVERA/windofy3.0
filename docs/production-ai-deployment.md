@@ -11,6 +11,16 @@ The web app must receive:
 AI_SERVICE_URL=https://<public-ai-service-host>
 ```
 
+Optional serverless fallback in Vercel:
+
+```text
+OPENAI_API_KEY=<server-side OpenAI key>
+OPENAI_VISION_MODEL=gpt-5.5
+OPENAI_RENDER_MODEL=gpt-5.5
+```
+
+When `OPENAI_API_KEY` is present, the Next.js API routes can fall back to the OpenAI Responses API for photo analysis, Dutch live measuring guidance, and render preview generation if the Python AI service is not configured or fails. `/api/health` reports `activeAiBackend` as `python-ai-service`, `openai-responses`, or `none`.
+
 ## AI Service Readiness
 
 `GET /health` now returns `503` until all critical runtime dependencies are present:

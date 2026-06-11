@@ -114,9 +114,11 @@ Run the Python AI service and Next.js app as two separate services.
 - AI service: `python -m src.AI.service`
 - Web app: `npm run build && npm run start:web`
 - Web app talks to the AI service through `AI_SERVICE_URL`.
+- If `OPENAI_API_KEY` is configured, the web app can use the OpenAI Responses API as a serverless fallback for photo analysis, Dutch live guidance, and render previews when the Python AI service is unavailable.
 - Web readiness endpoint: `/api/health`
 - AI readiness endpoint: `/health`
 - AI readiness returns `503` until `ANTHROPIC_API_KEY`, `RENDER_KEY_PRIMARY`, and the SAM2 checkpoint are present.
+- Web readiness returns `200` when either the Python AI service is healthy or the OpenAI fallback is configured; the response reports `activeAiBackend`.
 - Checkout uses `/api/orders/draft` for server-side order validation and `/api/orders/payment-session` for redirect-ready payment session preparation. Without provider credentials it redirects to `/betaling` as an internal handoff page.
 - Optional Supabase Storage is server-side only. Configure `SUPABASE_URL`, `SUPABASE_KEY`, and `SUPABASE_BUCKET`; never expose `SUPABASE_KEY` to the browser.
 - Keep `models/`, `.venv/`, `.env`, and uploaded runtime data out of git.
@@ -136,7 +138,7 @@ render.yaml
 docs/production-ai-deployment.md
 ```
 
-After the AI service is live, set Vercel production `AI_SERVICE_URL` to the public AI service URL and redeploy the web app.
+After the AI service is live, set Vercel production `AI_SERVICE_URL` to the public AI service URL and redeploy the web app. For a serverless fallback, set `OPENAI_API_KEY` plus optional `OPENAI_VISION_MODEL` and `OPENAI_RENDER_MODEL` in Vercel production.
 
 ## Verification
 

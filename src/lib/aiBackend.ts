@@ -35,6 +35,10 @@ function aiServiceBaseUrl() {
   return (process.env.AI_SERVICE_URL?.trim() || DEFAULT_AI_SERVICE_URL).replace(/\/$/, "");
 }
 
+export function isAiServiceConfigured() {
+  return Boolean(process.env.AI_SERVICE_URL?.trim());
+}
+
 function normalizeRemoteError(payload: unknown) {
   if (payload && typeof payload === "object" && "detail" in payload) {
     const detail = (payload as { detail?: unknown }).detail;
@@ -93,6 +97,15 @@ export async function callAiService<T>(
 }
 
 export async function getAiServiceHealth(timeoutMs = 5_000) {
+  if (!isAiServiceConfigured() && process.env.NODE_ENV === "production") {
+    return {
+      ok: false,
+      status: 503,
+      configured: false,
+      data: null,
+    };
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
