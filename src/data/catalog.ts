@@ -236,6 +236,10 @@ const readyProductImages: Record<string, { url: string; reviewNotes: string }> =
     url: "/catalog/products/aluminium-blinds-mistgrijs.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic grey aluminium slats, white frame, no text, no logo, no watermark.",
   },
+  "duo-roller-blinds-01": {
+    url: "/catalog/products/duo-roller-blinds-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white duo roller blind with alternating opaque and sheer textile bands, top roll, bottom rail and white frame, no text, no logo, no watermark.",
+  },
   "roller-blinds-02": {
     url: "/catalog/products/roller-blinds-linnen.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic linen roller blind fabric, correct top tube, no text, no logo, no watermark.",
