@@ -1,28 +1,8 @@
 {
-  "generatedAt": "2026-06-11T11:03:46.512Z",
-  "totalPending": 236,
+  "generatedAt": "2026-06-11T11:09:35.484Z",
+  "totalPending": 235,
   "outputDirectory": "public/catalog/products",
   "items": [
-    {
-      "id": "wood-blinds-01",
-      "groupId": "wood-blinds",
-      "subgroupId": null,
-      "name": "Hout Krijtwit",
-      "materialFamily": "Basswood",
-      "colorName": "Krijtwit",
-      "colorHex": "#f2eee6",
-      "outputPath": "public/catalog/products/wood-blinds-01.png",
-      "prompt": "Realistische studio productfoto voor een Nederlandse raamdecoratie webshop. Product: Hout Krijtwit. Categorie: Houten jaloezieen. Materiaal/familie: Basswood. Kleur: Krijtwit (#f2eee6). Toon het product gemonteerd in of op een wit kozijn, zonder tekst, logo of fictieve verpakking. Rustige lichte achtergrond, rechte lens, correcte schaal en herkenbare productconstructie.",
-      "negativePrompt": "Geen logo's, watermerken, prijsteksten, labels, mensen, handen, extra meubels of rommel. Geen vervormd raam, zwevend product, onjuiste lamelrichting, onrealistische plooien of verkeerde kleur. Geen generieke stoftextuur wanneer het product jaloezie, shutter, hor of dakraamsysteem moet zijn.",
-      "qaChecklist": [
-        "Producttype en constructie komen overeen met categorie en subcategorie.",
-        "Kleur en materiaal passen bij colorHex, colorName en materialFamily.",
-        "Product is gemonteerd in of op een realistisch wit kozijn met correcte schaal.",
-        "Beeld bevat geen tekst, logo, watermerk, verpakking, mensen of afleidende props.",
-        "Licht, schaduw, randen en perspectief ogen realistisch voor webshopgebruik."
-      ],
-      "referenceSourceUrl": "https://www.raamdecoratie.com/"
-    },
     {
       "id": "wood-blinds-02",
       "groupId": "wood-blinds",

@@ -228,6 +228,10 @@ const productSpecs: ProductSpec[] = [
 ];
 
 const readyProductImages: Record<string, { url: string; reviewNotes: string }> = {
+  "wood-blinds-01": {
+    url: "/catalog/products/wood-blinds-01.png",
+    reviewNotes: "AI-generated product mockup visually inspected: realistic chalk-white basswood slats, ladder cords, bottom rail and white frame, no text, no logo, no watermark.",
+  },
   "aluminium-blinds-07": {
     url: "/catalog/products/aluminium-blinds-mistgrijs.png",
     reviewNotes: "AI-generated product mockup visually inspected: realistic grey aluminium slats, white frame, no text, no logo, no watermark.",
