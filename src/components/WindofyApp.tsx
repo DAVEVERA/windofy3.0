@@ -27,6 +27,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HeroWoodBlind3D } from "@/components/HeroWoodBlind3D";
 import { catalogGroups, catalogProducts } from "@/data/catalog";
 import {
   builderBlocks,
@@ -1078,22 +1079,7 @@ function HomeView({ onStart, onExplain }: { onStart: () => void; onExplain: () =
 }
 
 function Hero3DWindow() {
-  return (
-    <div className="hero-visual" aria-label="3D raamvisualisatie">
-      <div className="room-plane">
-        <div className="window-frame">
-          <div className="blind-stack">
-            {Array.from({ length: 11 }).map((_, index) => (
-              <span key={index} style={{ transform: `translateZ(${index * 1.5}px) rotateX(-${index % 2}deg)` }} />
-            ))}
-          </div>
-          <div className="detection-box"><span>Live mask 92%</span></div>
-        </div>
-        <div className="hero-card-floating top"><Camera size={17} />Spraakcoach NL</div>
-        <div className="hero-card-floating bottom"><Ruler size={17} />4 raamopeningen</div>
-      </div>
-    </div>
-  );
+  return <HeroWoodBlind3D />;
 }
 
 function FeaturePanel({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {

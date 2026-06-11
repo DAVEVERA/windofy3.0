@@ -278,6 +278,65 @@ p {
   perspective: 1400px;
 }
 
+.hero-woodblind {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(30rem, min(58vh, 38rem)) auto;
+  min-height: min(66vh, 42rem);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.9), transparent 30%),
+    linear-gradient(145deg, #f7f1e7, #dfe8dc);
+  box-shadow: var(--sh-lg);
+}
+
+.hero-woodblind-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 30rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hero-woodblind-canvas:active {
+  cursor: grabbing;
+}
+
+.hero-woodblind-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-woodblind-controls {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 1rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.78rem;
+  box-shadow: var(--sh-sm);
+  backdrop-filter: blur(14px);
+}
+
+.hero-woodblind-controls label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.hero-woodblind-controls input {
+  width: 100%;
+  accent-color: var(--bronze);
+}
+
 .room-plane {
   position: relative;
   min-height: min(66vh, 42rem);
@@ -1504,6 +1563,16 @@ textarea {
     order: -1;
   }
 
+  .hero-woodblind {
+    order: -1;
+    grid-template-rows: minmax(24rem, 28rem) auto;
+    min-height: 0;
+  }
+
+  .hero-woodblind-canvas {
+    min-height: 24rem;
+  }
+
   .room-plane {
     min-height: 26rem;
     transform: none;
@@ -1608,6 +1677,17 @@ textarea {
 
   .room-plane {
     min-height: 19rem;
+  }
+
+  .hero-woodblind,
+  .hero-woodblind-canvas {
+    min-height: 0;
+  }
+
+  .hero-woodblind-controls {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    padding: 0.65rem;
   }
 
   .window-frame {
