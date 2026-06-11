@@ -1,6 +1,8 @@
 """Production smoke checks for the Windofy dual-service runtime.
 
 Default mode checks service readiness only.
+Use --web-only when the Python AI service is intentionally not deployed and the
+web app should report its own active AI backend.
 Use --live-ai to call the paid/remote analysis endpoint.
 Use --render together with --live-ai to call the image render endpoint.
 """
@@ -49,6 +51,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--web-url", default="http://localhost:3000")
     parser.add_argument("--ai-url", default="http://127.0.0.1:5000")
+    parser.add_argument("--web-only", action="store_true", help="Skip direct Python AI health and validate web health only.")
     parser.add_argument("--live-ai", action="store_true", help="Call live paid/remote analysis models.")
     parser.add_argument("--render", action="store_true", help="Also call live image rendering. Requires --live-ai.")
     args = parser.parse_args()
@@ -61,8 +64,9 @@ def main() -> int:
     }
 
     try:
-        result["aiHealth"] = _get_json(f"{args.ai_url.rstrip('/')}/health")
         result["webHealth"] = _get_json(f"{args.web_url.rstrip('/')}/api/health")
+        if not args.web_only:
+            result["aiHealth"] = _get_json(f"{args.ai_url.rstrip('/')}/health")
 
         if args.live_ai:
             image_data_url = _synthetic_window_data_url()
@@ -101,7 +105,9 @@ def main() -> int:
                 }
 
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        failed = not result["aiHealth"].get("ok") or not result["webHealth"].get("ok")
+        failed = not result["webHealth"].get("ok")
+        if result["aiHealth"] is not None:
+            failed = failed or not result["aiHealth"].get("ok")
         if result["analyze"] is not None:
             failed = failed or not result["analyze"].get("ok")
         if result["render"] is not None:

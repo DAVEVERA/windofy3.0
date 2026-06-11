@@ -51,4 +51,4 @@ The landing hero now includes:
 
 - The 3D model is now real and interactive, but can be refined further with curved slat geometry, cord knots, and higher fidelity wood normals.
 - Account recovery depends on Supabase Auth being fully configured and tested with real user sessions.
-- Live production health still depends on deploying the Python AI service and setting Vercel `AI_SERVICE_URL`.
+- Live production health still depends on configuring one production AI backend: either a public Python AI service via Vercel `AI_SERVICE_URL` or the server-side OpenAI fallback via Vercel `OPENAI_API_KEY`.
