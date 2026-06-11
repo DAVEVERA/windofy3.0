@@ -28,11 +28,15 @@ py -m venv .venv
 models/sam2.1_hiera_large.pt
 ```
 
+Set `SAM2_CHECKPOINT_PATH` when the checkpoint is mounted somewhere else.
+Set `SAM2_CHECKPOINT_URL` in container deployments that should download the checkpoint on first boot.
+
 4. Configure `.env` from `.env.example`. Required server-side keys:
 
 ```text
 ANTHROPIC_API_KEY
 RENDER_KEY_PRIMARY
+SAM2_CHECKPOINT_PATH
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_KEY
@@ -112,6 +116,7 @@ Run the Python AI service and Next.js app as two separate services.
 - Web app talks to the AI service through `AI_SERVICE_URL`.
 - Web readiness endpoint: `/api/health`
 - AI readiness endpoint: `/health`
+- AI readiness returns `503` until `ANTHROPIC_API_KEY`, `RENDER_KEY_PRIMARY`, and the SAM2 checkpoint are present.
 - Checkout uses `/api/orders/draft` for server-side order validation and `/api/orders/payment-session` for redirect-ready payment session preparation. Without provider credentials it redirects to `/betaling` as an internal handoff page.
 - Optional Supabase Storage is server-side only. Configure `SUPABASE_URL`, `SUPABASE_KEY`, and `SUPABASE_BUCKET`; never expose `SUPABASE_KEY` to the browser.
 - Keep `models/`, `.venv/`, `.env`, and uploaded runtime data out of git.
@@ -123,6 +128,15 @@ docker compose up --build
 ```
 
 The SAM2 checkpoint is mounted from `./models` into the AI container.
+
+Render AI deployment:
+
+```text
+render.yaml
+docs/production-ai-deployment.md
+```
+
+After the AI service is live, set Vercel production `AI_SERVICE_URL` to the public AI service URL and redeploy the web app.
 
 ## Verification
 

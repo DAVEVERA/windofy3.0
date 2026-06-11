@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: windofy-ai
+    runtime: docker
+    dockerfilePath: ./Dockerfile.ai
+    plan: standard
+    healthCheckPath: /health
+    disk:
+      name: windofy-ai-models
+      mountPath: /app/models
+      sizeGB: 2
+    envVars:
+      - key: AI_HOST
+        value: 0.0.0.0
+      - key: AI_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+      - key: AI_CORS_ORIGINS
+        value: https://windofy30.vercel.app,https://windofy.nl
+      - key: SAM2_CHECKPOINT_PATH
+        value: /app/models/sam2.1_hiera_large.pt
+      - key: SAM2_CHECKPOINT_URL
+        value: https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt
+      - key: VISION_ANALYSIS_MODEL
+        value: claude-opus-4-1-20250805
+      - key: VISION_FALLBACK_MODEL
+        value: claude-sonnet-4-5-20250929
+      - key: RENDER_MODEL_PRIMARY
+        value: gemini-3-pro-image-preview
+      - key: RENDER_MODEL_FALLBACK
+        value: gemini-2.5-flash-image
+      - key: SUPABASE_BUCKET
+        value: uploads
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RENDER_KEY_PRIMARY
+        sync: false
+      - key: RENDER_KEY_FALLBACK
+        sync: false
+      - key: RENDER_HTTP_FALLBACK_KEY
+        sync: false
+      - key: RENDER_HTTP_FALLBACK_ENDPOINT
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

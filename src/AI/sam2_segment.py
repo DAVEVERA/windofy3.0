@@ -5,6 +5,7 @@ Detects the window region in a room photo and returns both bounds and a
 binary mask. The mask tells downstream render/compositing stages which pixels belong to the window region.
 """
 
+import os
 import sys
 import base64
 import io
@@ -24,6 +25,13 @@ from src.AI.utils import strip_data_url
 _PREDICTOR = None
 
 
+def sam2_checkpoint_path() -> Path:
+    configured = os.getenv("SAM2_CHECKPOINT_PATH", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return ROOT / "models" / "sam2.1_hiera_large.pt"
+
+
 def get_sam2_predictor():
     """Lazy-load SAM2 predictor. Cached after first call."""
     global _PREDICTOR
@@ -37,7 +45,7 @@ def get_sam2_predictor():
     except ImportError as exc:
         raise RuntimeError(f"SAM2 not installed: {exc}")
 
-    checkpoint = ROOT / "models" / "sam2.1_hiera_large.pt"
+    checkpoint = sam2_checkpoint_path()
     if not checkpoint.exists():
         raise FileNotFoundError(
             f"SAM2.1 checkpoint missing at {checkpoint}. "

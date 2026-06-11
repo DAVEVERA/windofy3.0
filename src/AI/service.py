@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,7 @@ from src.AI.analyse_vision import run_analysis_pipeline
 from src.AI.live_guidance import run_live_guidance
 from src.AI.prompts import LIVE_GUIDANCE_LANGUAGE
 from src.AI.render_image import generate_decor
+from src.AI.sam2_segment import sam2_checkpoint_path
 
 
 class AnalyzeRequest(BaseModel):
@@ -61,25 +62,29 @@ def _error(exc: Exception) -> HTTPException:
 
 
 @app.get("/health")
-def health() -> dict[str, Any]:
-    root = Path(__file__).resolve().parents[2]
-    checkpoint = root / "models" / "sam2.1_hiera_large.pt"
+def health(response: Response) -> dict[str, Any]:
+    checkpoint = sam2_checkpoint_path()
+    dependencies = {
+        "anthropicKey": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "renderKeyPrimary": bool(os.getenv("RENDER_KEY_PRIMARY")),
+        "sam2Checkpoint": checkpoint.exists(),
+        "supabaseStorage": {
+            "configured": bool(os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY")),
+            "bucket": os.getenv("SUPABASE_BUCKET", "uploads"),
+        },
+    }
+    ok = dependencies["anthropicKey"] and dependencies["renderKeyPrimary"] and dependencies["sam2Checkpoint"]
+    if not ok:
+        response.status_code = 503
+
     return {
-        "ok": True,
+        "ok": ok,
         "service": "windofy-ai",
         "analysisModel": os.getenv("VISION_ANALYSIS_MODEL", ""),
         "liveGuidanceLanguage": LIVE_GUIDANCE_LANGUAGE,
         "renderPrimaryModel": os.getenv("RENDER_MODEL_PRIMARY", ""),
         "renderFallbackModel": os.getenv("RENDER_MODEL_FALLBACK", ""),
-        "dependencies": {
-            "anthropicKey": bool(os.getenv("ANTHROPIC_API_KEY")),
-            "renderKeyPrimary": bool(os.getenv("RENDER_KEY_PRIMARY")),
-            "sam2Checkpoint": checkpoint.exists(),
-            "supabaseStorage": {
-                "configured": bool(os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY")),
-                "bucket": os.getenv("SUPABASE_BUCKET", "uploads"),
-            },
-        },
+        "dependencies": dependencies,
     }
 
 

@@ -13,6 +13,7 @@ RUN python -m pip install -r requirements.txt \
     && python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 COPY src ./src
+COPY scripts ./scripts
 
 EXPOSE 5000
-CMD ["python", "-m", "src.AI.service"]
+CMD ["sh", "-c", "python scripts/ensure_sam2_checkpoint.py && python -m src.AI.service"]
